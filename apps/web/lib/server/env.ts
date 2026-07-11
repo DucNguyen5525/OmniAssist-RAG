@@ -4,6 +4,7 @@ export interface ServerEnv {
   gcliBaseUrl: string;
   gcliApiKeys: string;
   gcliModel: string;
+  gcliModels: string[];
   gcliStrategy: string;
   r2AccountId?: string;
   r2AccessKeyId?: string;
@@ -31,12 +32,20 @@ export function getServerEnv(): ServerEnv {
     );
   }
 
+  const gcliModel = process.env.GCLI_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
+  const gcliModels = (process.env.GCLI_MODELS ?? "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+  if (!gcliModels.includes(gcliModel)) gcliModels.unshift(gcliModel);
+
   return {
     mongodbUri: requiredEnv("MONGODB_URI"),
     mongodbDb: process.env.MONGODB_DB ?? "helpdesk_rag",
     gcliBaseUrl: process.env.GCLI_BASE_URL ?? "https://gcli.ggchan.dev/v1",
     gcliApiKeys,
-    gcliModel: process.env.GCLI_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-3-flash-preview",
+    gcliModel,
+    gcliModels,
     gcliStrategy: process.env.GCLI_ROTATION_STRATEGY ?? "swrr",
     r2AccountId: process.env.R2_ACCOUNT_ID,
     r2AccessKeyId: process.env.R2_ACCESS_KEY_ID,

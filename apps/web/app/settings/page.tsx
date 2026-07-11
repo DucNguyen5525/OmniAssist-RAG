@@ -8,17 +8,19 @@ import { defaultSettings, loadSettings, saveSettings } from "@/lib/settings";
 export default function SettingsPage() {
   const [topK, setTopK] = useState(defaultSettings.topK);
   const [tags, setTags] = useState(defaultSettings.tags);
+  const [retrievalMode, setRetrievalMode] = useState(defaultSettings.retrievalMode);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const settings = loadSettings();
     setTopK(settings.topK);
     setTags(settings.tags);
+    setRetrievalMode(settings.retrievalMode);
   }, []);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    saveSettings({ topK, tags });
+    saveSettings({ ...loadSettings(), topK, tags, retrievalMode });
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
@@ -50,6 +52,21 @@ export default function SettingsPage() {
               placeholder="helpdesk,warranty"
               className="mt-2 h-10 w-full rounded-md border border-stone-300 px-3 text-sm outline-none focus:border-mint"
             />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Chế độ truy hồi mặc định</span>
+            <select
+              value={retrievalMode}
+              onChange={(event) => setRetrievalMode(event.target.value as typeof retrievalMode)}
+              className="mt-2 h-10 w-full rounded-md border border-stone-300 px-3 text-sm outline-none focus:border-mint"
+            >
+              <option value="pageindex">PageIndex (tài liệu văn bản)</option>
+              <option value="amg">AMG (dữ liệu bảng)</option>
+            </select>
+            <span className="mt-1 block text-xs text-stone-500">
+              AMG trả lời bằng thống kê tính trực tiếp trên bộ dữ liệu gắn với helpdesk.
+            </span>
           </label>
 
           <div className="rounded-md bg-stone-50 p-3 text-xs text-stone-600">

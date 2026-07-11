@@ -1,5 +1,5 @@
 import { ObjectId, type Document as MongoDocument } from "mongodb";
-import type { ChatMessage, ChatSession, Helpdesk, HelpdeskDocument, PageIndexNode, SourceReference } from "@helpdesk/shared";
+import type { ChatMessage, ChatSession, DatasetColumn, DatasetInfo, Helpdesk, HelpdeskDocument, PageIndexNode, RetrievalMode, SourceReference } from "@helpdesk/shared";
 import { ensureMongoIndexes, getDb } from "./mongodb";
 
 export interface DocumentRecord extends MongoDocument {
@@ -73,8 +73,29 @@ export interface HelpdeskRecord extends MongoDocument {
   topK: number;
   systemPrompt?: string;
   model?: string;
+  retrievalMode?: RetrievalMode;
+  datasetSlug?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface DatasetRecord extends MongoDocument {
+  _id: ObjectId;
+  datasetSlug: string;
+  title: string;
+  source: string;
+  rowCount: number;
+  columns: DatasetColumn[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type DatasetCellValue = string | number | null;
+
+export interface DatasetRowRecord extends MongoDocument {
+  _id: ObjectId;
+  datasetId: ObjectId;
+  data: Record<string, DatasetCellValue>;
 }
 
 export function toObjectId(id: string): ObjectId {
@@ -148,8 +169,21 @@ export function serializeHelpdesk(record: HelpdeskRecord): Helpdesk {
     topK: record.topK ?? 6,
     systemPrompt: record.systemPrompt,
     model: record.model,
+    retrievalMode: record.retrievalMode ?? "pageindex",
+    datasetSlug: record.datasetSlug,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
+  };
+}
+
+export function serializeDataset(record: DatasetRecord): DatasetInfo {
+  return {
+    id: record._id.toString(),
+    slug: record.datasetSlug,
+    title: record.title,
+    source: record.source,
+    rowCount: record.rowCount ?? 0,
+    columns: record.columns ?? []
   };
 }
 
@@ -312,7 +346,7 @@ export async function getHelpdeskBySlug(slug: string): Promise<Helpdesk | null> 
   return record ? serializeHelpdesk(record) : null;
 }
 
-export async function createHelpdesk(input: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string }): Promise<Helpdesk> {
+export async function createHelpdesk(input: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string }): Promise<Helpdesk> {
   await ensureMongoIndexes();
   const db = await getDb();
   const now = new Date();
@@ -327,6 +361,8 @@ export async function createHelpdesk(input: { name: string; slug: string; descri
     topK: input.topK ?? 6,
     systemPrompt: input.systemPrompt,
     model: input.model,
+    retrievalMode: input.retrievalMode ?? "pageindex",
+    datasetSlug: input.datasetSlug,
     createdAt: now,
     updatedAt: now
   });
@@ -335,7 +371,7 @@ export async function createHelpdesk(input: { name: string; slug: string; descri
   return serializeHelpdesk(saved);
 }
 
-export async function updateHelpdesk(slug: string, input: { name?: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string }): Promise<Helpdesk | null> {
+export async function updateHelpdesk(slug: string, input: { name?: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string }): Promise<Helpdesk | null> {
   const db = await getDb();
   const now = new Date();
   const result = await db.collection<HelpdeskRecord>("helpdesks").findOneAndUpdate(
@@ -350,6 +386,70 @@ export async function deleteHelpdesk(slug: string): Promise<boolean> {
   const db = await getDb();
   const result = await db.collection<HelpdeskRecord>("helpdesks").deleteOne({ slug });
   return result.deletedCount > 0;
+}
+
+export async function listDatasets(): Promise<DatasetInfo[]> {
+  await ensureMongoIndexes();
+  const db = await getDb();
+  const records = await db.collection<DatasetRecord>("datasets").find({}).sort({ updatedAt: -1 }).toArray();
+  return records.map(serializeDataset);
+}
+
+export async function getDatasetBySlug(datasetSlug: string): Promise<DatasetRecord | null> {
+  const db = await getDb();
+  return db.collection<DatasetRecord>("datasets").findOne({ datasetSlug });
+}
+
+export async function getDatasetRows(datasetId: ObjectId): Promise<DatasetRowRecord[]> {
+  const db = await getDb();
+  return db.collection<DatasetRowRecord>("dataset_rows").find({ datasetId }).toArray();
+}
+
+export async function upsertDatasetWithRows(input: {
+  datasetSlug: string;
+  title: string;
+  source: string;
+  columns: DatasetColumn[];
+  rows: Array<Record<string, DatasetCellValue>>;
+}): Promise<DatasetInfo> {
+  await ensureMongoIndexes();
+  const db = await getDb();
+  const now = new Date();
+  const existing = await db.collection<DatasetRecord>("datasets").findOne({ datasetSlug: input.datasetSlug });
+  const datasetId = existing?._id ?? new ObjectId();
+
+  await db.collection<DatasetRecord>("datasets").updateOne(
+    { _id: datasetId },
+    {
+      $set: {
+        datasetSlug: input.datasetSlug,
+        title: input.title,
+        source: input.source,
+        rowCount: input.rows.length,
+        columns: input.columns,
+        updatedAt: now
+      },
+      $setOnInsert: {
+        _id: datasetId,
+        createdAt: now
+      }
+    },
+    { upsert: true }
+  );
+
+  await db.collection<DatasetRowRecord>("dataset_rows").deleteMany({ datasetId });
+  if (input.rows.length > 0) {
+    const records: DatasetRowRecord[] = input.rows.map((data) => ({
+      _id: new ObjectId(),
+      datasetId,
+      data
+    }));
+    await db.collection<DatasetRowRecord>("dataset_rows").insertMany(records);
+  }
+
+  const saved = await db.collection<DatasetRecord>("datasets").findOne({ _id: datasetId });
+  if (!saved) throw new Error("Failed to save dataset");
+  return serializeDataset(saved);
 }
 
 function escapeRegex(value: string) {

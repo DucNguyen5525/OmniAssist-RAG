@@ -83,13 +83,33 @@ function scoreNode(query: string, node: PageIndexNodeRecord) {
   const summary = normalize(node.summary ?? "");
   const content = normalize(node.content ?? "");
   let score = 0;
+  let matchedTerms = 0;
 
   for (const term of terms) {
-    if (title.includes(term)) score += 8;
-    if (path.includes(term)) score += 6;
-    if (summary.includes(term)) score += 4;
-    if (content.includes(term)) score += 1;
+    let matched = false;
+    if (title.includes(term)) {
+      score += 8;
+      matched = true;
+    }
+    // path already repeats the node title, so keep its weight below title
+    if (path.includes(term)) {
+      score += 4;
+      matched = true;
+    }
+    if (summary.includes(term)) {
+      score += 4;
+      matched = true;
+    }
+    const occurrences = countOccurrences(content, term);
+    if (occurrences > 0) {
+      score += Math.min(occurrences, 3) * 2;
+      matched = true;
+    }
+    if (matched) matchedTerms += 1;
   }
+
+  // reward nodes covering most query terms so content-rich matches beat generic title hits
+  score += (matchedTerms / terms.length) * 15;
 
   const phrase = normalize(query);
   if (phrase.length > 4) {
@@ -100,6 +120,17 @@ function scoreNode(query: string, node: PageIndexNodeRecord) {
 
   if (node.level <= 1) score += 0.5;
   return score;
+}
+
+function countOccurrences(haystack: string, needle: string) {
+  if (!needle) return 0;
+  let count = 0;
+  let index = haystack.indexOf(needle);
+  while (index !== -1) {
+    count += 1;
+    index = haystack.indexOf(needle, index + needle.length);
+  }
+  return count;
 }
 
 function tokenize(value: string) {

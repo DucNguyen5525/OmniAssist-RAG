@@ -1,5 +1,6 @@
 export type DocumentStatus = "ready" | "processing" | "failed";
 export type MessageRole = "user" | "assistant" | "system";
+export type RetrievalMode = "pageindex" | "amg";
 
 export interface HelpdeskDocument {
   id: string;
@@ -68,6 +69,11 @@ export interface ChatResponse {
   sources: SourceReference[];
 }
 
+export interface ModelsInfo {
+  models: string[];
+  defaultModel: string;
+}
+
 export interface RetrievalResponseItem extends SourceReference {
   content: string;
   summary?: string;
@@ -82,6 +88,25 @@ export interface Helpdesk {
   topK: number;
   systemPrompt?: string;
   model?: string;
+  retrievalMode: RetrievalMode;
+  datasetSlug?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DatasetColumn {
+  name: string;
+  label: string;
+  type: "number" | "category";
+  unit?: string;
+  categories?: string[];
+}
+
+export interface DatasetInfo {
+  id: string;
+  slug: string;
+  title: string;
+  source: string;
+  rowCount: number;
+  columns: DatasetColumn[];
 }

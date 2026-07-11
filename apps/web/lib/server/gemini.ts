@@ -257,12 +257,40 @@ function getResilientClient(): { client: ResilientGCLIClient; model: string } {
   return { client: clientInstance, model: env.gcliModel };
 }
 
-export async function generateGroundedAnswer(question: string, retrievedNodes: RetrievedNode[], systemPrompt?: string) {
+export function getAvailableModels(): { models: string[]; defaultModel: string } {
+  const env = getServerEnv();
+  return { models: env.gcliModels, defaultModel: env.gcliModel };
+}
+
+// Requested models outside GCLI_MODELS silently fall back to the env default.
+export function resolveRequestedModel(requested?: string): string {
+  const env = getServerEnv();
+  if (requested && env.gcliModels.includes(requested)) return requested;
+  return env.gcliModel;
+}
+
+export async function generateChatCompletion(
+  messages: Array<{ role: string; content: string }>,
+  options: Record<string, unknown> = {},
+  model?: string
+): Promise<string> {
+  const { client } = getResilientClient();
+  const result = await client.createChatCompletion(resolveRequestedModel(model), messages, options);
+  return result.content.trim();
+}
+
+export async function generateGroundedAnswer(
+  question: string,
+  retrievedNodes: RetrievedNode[],
+  systemPrompt?: string,
+  model?: string
+) {
   if (retrievedNodes.length === 0) {
     return "Tôi chưa tìm thấy đủ thông tin trong tài liệu hiện có để trả lời câu hỏi này.";
   }
 
-  const { client, model } = getResilientClient();
+  const { client } = getResilientClient();
+  const resolvedModel = resolveRequestedModel(model);
   const context = buildContextBlock(retrievedNodes);
 
   const systemPreamble = systemPrompt ? `${systemPrompt}\n\n` : "";
@@ -290,7 +318,7 @@ ${context}
 Question:
 ${question}`;
 
-  const result = await client.createChatCompletion(model, [
+  const result = await client.createChatCompletion(resolvedModel, [
     { role: "user", content: prompt },
   ]);
 

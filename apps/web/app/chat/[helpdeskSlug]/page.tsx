@@ -11,7 +11,7 @@ import { ChatInputBar } from "@/components/chat/ChatInputBar";
 import { ChatMessageItem } from "@/components/chat/ChatMessageItem";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { apiClient, getErrorMessage } from "@/lib/api-client";
-import { loadSettings, parseTags } from "@/lib/settings";
+import { loadSettings, parseTags, saveSettings } from "@/lib/settings";
 
 interface UiMessage {
   id?: string;
@@ -35,9 +35,31 @@ export default function HelpdeskChatPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [models, setModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const settings = useMemo(() => loadSettings(), []);
+
+  // Load model list from server; keep saved choice if still allowed
+  useEffect(() => {
+    async function loadModels() {
+      try {
+        const res = await apiClient.listModels();
+        setModels(res.data.models);
+        const saved = settings.model;
+        setSelectedModel(saved && res.data.models.includes(saved) ? saved : res.data.defaultModel);
+      } catch {
+        // model selector stays hidden when the list cannot be loaded
+      }
+    }
+    loadModels();
+  }, [settings]);
+
+  function handleSelectModel(model: string) {
+    setSelectedModel(model);
+    saveSettings({ ...loadSettings(), model });
+  }
 
   // Fetch helpdesk details
   useEffect(() => {
@@ -123,6 +145,8 @@ export default function HelpdeskChatPage() {
         topK: helpdesk?.topK ?? settings.topK,
         tags: helpdesk?.tags?.length ? helpdesk.tags : parseTags(settings.tags),
         helpdeskSlug,
+        retrievalMode: helpdesk?.retrievalMode ?? settings.retrievalMode,
+        model: selectedModel || undefined,
       });
 
       if (!activeSessionId) {
@@ -199,6 +223,9 @@ export default function HelpdeskChatPage() {
           title={activeSession?.title || helpdesk.name}
           onClearChat={messages.length > 0 ? handleNewChat : undefined}
           hasMessages={messages.length > 0}
+          models={models}
+          selectedModel={selectedModel}
+          onSelectModel={handleSelectModel}
         />
 
         {/* Dashboard back link */}

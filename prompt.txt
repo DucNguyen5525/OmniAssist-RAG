@@ -1,1 +1,3 @@
-﻿Hãy áp dụng theo ví dụ D:\Dev\4.libs\gcli-proxy\examples\key_rotation_example.py thay vì gemini truyền thống.
+﻿Bây giờ tôi có các loại file dữ liệu dùng để truy vấn là loại txt, pdf, docs (chưa nằm trong này), html (kèm folder images là các ảnh đính kèm trong html), md dùng để truy vấn để trả lời câu hỏi từ người dùng. Bạn hãy giúp tôi trả lời các câu sau:
+1. Bạn xem loại file nào sẽ phù hợp nhất để làm lưu trữ truy vấn. CHú ý là mỗi file rất nặng, đừng đọc hết chúng.
+2. Nếu tôi dùng html kèm images làm truy vấn thì khi hỏi AI có thể gửi file đó kèm các ảnh trong folder images liên quan đến nội dung trả lời kèm note từ file gốc không?

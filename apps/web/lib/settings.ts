@@ -1,13 +1,19 @@
-﻿export interface RagSettings {
+﻿import type { RetrievalMode } from "@helpdesk/shared";
+
+export interface RagSettings {
   topK: number;
   tags: string;
+  retrievalMode: RetrievalMode;
+  model: string;
 }
 
 const key = "helpdesk-pageindex-settings";
 
 export const defaultSettings: RagSettings = {
   topK: 6,
-  tags: ""
+  tags: "",
+  retrievalMode: "pageindex",
+  model: ""
 };
 
 export function loadSettings(): RagSettings {

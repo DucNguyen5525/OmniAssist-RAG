@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-05 08:22:40 +07:00  
-**Session:** #16 - Scope Auth Middleware to Dashboard Only (Chat & other routes remain public)
+**Last Updated:** 2026-07-12 +07:00  
+**Session:** #18 - MD → PageIndex pipeline for Tech Support Manual; per-request model selection; retrieval scoring rebalance
 
 ---
 
@@ -28,7 +28,13 @@ apps/web/app/dashboard/           Helpdesk management dashboard UI
 apps/web/app/chat/[helpdeskSlug]/ Helpdesk-scoped Chat UI
 apps/web/app/api/auth/            Auth API routes (login, logout, check)
 apps/web/app/api/helpdesks/       Helpdesk CRUD API routes
-apps/web/lib/server/              MongoDB, R2, GCLI/Gemini, Auth, PageIndex import/retrieval modules
+apps/web/lib/server/              MongoDB, R2, GCLI/Gemini, Auth, PageIndex import/retrieval, tabular-qa modules
+apps/web/lib/server/tabular-qa.ts AMG-mode: LLM schema-linking + deterministic stats over dataset rows
+scripts/import-dataset.ts         Local importer for CSV/XLS clinical datasets (datasets/dataset_rows)
+scripts/extract-md-images.ts      Extracts base64 images from Google-Docs-exported MD into files + path refs
+scripts/md-to-pageindex.ts        Converts cleaned MD (heading tree + large-table row chunks) to PageIndex JSON
+.data/Docs/                       Source documents (Tech Support Manual in md/pdf/txt/html; same content)
+docs/                             Research notes + tabular-QA plan (research-amg-tabular-qa.md, plan-tabular-qa-v1.md)
 apps/web/components/chat/         Chatbot UI components (Sidebar, InputBar, MessageItem, Header, EmptyState)
 apps/web/app/admin/documents/     PageIndex JSON import and document list UI
 apps/web/app/admin/debug/         Vectorless retrieval debug UI
@@ -86,7 +92,8 @@ Frontend calls same-origin Next API routes through `apps/web/lib/api-client.ts`.
 /api/auth/check                 Auth check API
 /api/helpdesks                  Helpdesk list/create API
 /api/helpdesks/[slug]           Helpdesk get/update/delete API
-/api/chat                       Chat Q&A API (supports helpdeskSlug)
+/api/chat                       Chat Q&A API (supports helpdeskSlug, model)
+/api/models                     Available AI models list (GCLI_MODELS + default)
 ```
 
 ### Backend Layers
@@ -108,10 +115,15 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Supabase/pgvector removal from runtime | Completed | `package.json`, `.env.example`, `README.md`, `LEGACY_DISABLED.md` | Old dirs remain OS-locked but disabled and ignored. |
 | MongoDB data layer | Completed | `mongodb.ts`, `repository.ts` | Connection caching and collection indexes. |
 | Cloudflare R2 layer | Completed | `r2.ts`, importer modules | Used for optional PageIndex JSON backup. |
-| PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. |
+| PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring counts content term frequency (capped) + query-term coverage bonus so content-rich nodes beat generic title hits. |
+| Per-request AI model selection | Completed | `env.ts`, `gemini.ts`, `/api/models`, `/api/chat`, `ChatHeader.tsx`, chat page, `settings.ts` | `GCLI_MODELS` env lists allowed models; chat header dropdown lets user pick (saved in local storage); priority request model → helpdesk.model → `GCLI_MODEL` default; invalid model silently falls back to default. |
+| Tabular-QA retrieval mode (`amg`) | Completed | `tabular-qa.ts`, `/api/chat`, `import-dataset.ts`, dashboard/settings UI | LLM plans query → code computes count/proportion/mean/median/min/max/groupBy/correlation over `dataset_rows`; numbers computed in TS (not LLM). Per-helpdesk `retrievalMode` + `datasetSlug`. Ingest of dengue CSV/XLS is user-run. |
 | GCLI Key Rotation LLM layer | Completed | `gemini.ts`, `env.ts`, `/api/chat` | Replaces raw Gemini SDK with SWRR/Weighted Random key rotation, failover, model mapping. |
 | PageIndex import API/UI | Completed | `/api/documents/import`, admin documents page | Imports existing PageIndex JSON. |
 | Local TS import script | Completed | `scripts/import-pageindex.ts` | `npm run import:pageindex -- --file ...`. |
+| MD base64 image extraction | Completed | `scripts/extract-md-images.ts` | Ran on `.data/Docs/Tech Support Manual.md`: 561 images extracted, cleaned MD 41MB → 281KB in `Tech Support Manual-extracted/`. On PowerShell call `npx tsx scripts/extract-md-images.ts --file ...` (npm swallows `--`). |
+| MD → PageIndex JSON converter | Completed | `scripts/md-to-pageindex.ts` | Heading tree → node tree; tables with >15 data rows split into child chunk nodes (header repeated). Tech Support Manual: 155 nodes (24 table chunks). |
+| Tech Support Manual ingest + E2E test | Completed | MongoDB `tech-support-manual` doc | Imported (155 nodes, tags `helpdesk`,`tech-support`); chat E2E verified: DEJAVOO double-item question (VI + EN) and tip-setup question answered correctly with DEJAVOO ISSUES / Set up Tip citations. |
 | Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Not run in Vercel runtime. |
 | Authentication | Planning | None | Needed before public use. |
 | Automated tests | Planning | None | Not added yet. |
@@ -131,6 +143,12 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 
 ### Medium Priority
 
+- [ ] Ingest dengue datasets into MongoDB, e.g. `npm run import:dataset -- --file "D:/Dev/4.research-pj/Papers/paper1/pntd.0005498.s003/baseline.csv" --slug dengue-baseline --title "Dengue baseline" --source paper1` (repeat for `plt.csv` and paper2 `.xls`), then create an `amg` helpdesk pointing at the dataset slug.
+- [x] Create a `pageindex` helpdesk for `tech-support-manual` (slug `tech-support`, tags `tech-support`, topK 6) — scoped chat verified via API (Batch Reject QD question answered with correct section citation).
+- [x] Validate chat + model dropdown in the browser UI at `/chat/tech-support` — verified via Chrome automation: dashboard card, model dropdown switch to `gemini-3.5-flash` (server log confirmed model used), grounded answer with correct `Update Auto Batch Time or Set up Tax` citation and PageIndex citations drawer.
+- [ ] Optional recall boost: generate per-node `summary` with Gemini during `md-to-pageindex` conversion (retrieval already scores the summary field) — helps Vietnamese questions over English content.
+- [ ] Deferred: upload extracted images to R2 and surface per-node image URLs in chat citations (image refs already kept inline in node content).
+- [ ] End-to-end test `amg` mode against a real dataset (e.g. verify proportion queries match the paper reports).
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
 - [ ] Add tests for `flattenPageIndexTree`, retrieval scoring, import route, and chat route with mocked Gemini.
 - [ ] Physically delete `apps/api/` and `supabase/` on a machine where Windows filesystem permits deletion.
@@ -155,6 +173,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - `@aws-sdk/client-s3` - S3-compatible Cloudflare R2 client.
 - `zod` - API validation.
 - `tsx` - Local TypeScript import script runner.
+- `xlsx` (devDependency) - Parses CSV/XLS in `scripts/import-dataset.ts`; not in Vercel runtime bundle.
 
 ### External APIs / Services
 

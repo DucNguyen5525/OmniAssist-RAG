@@ -37,6 +37,8 @@ interface HelpdeskFormData {
   tags: string;
   topK: number;
   systemPrompt: string;
+  retrievalMode: "pageindex" | "amg";
+  datasetSlug: string;
 }
 
 const defaultForm: HelpdeskFormData = {
@@ -46,6 +48,8 @@ const defaultForm: HelpdeskFormData = {
   tags: "",
   topK: 6,
   systemPrompt: "",
+  retrievalMode: "pageindex",
+  datasetSlug: "",
 };
 
 export default function DashboardPage() {
@@ -53,10 +57,44 @@ export default function DashboardPage() {
   const [helpdesks, setHelpdesks] = useState<Helpdesk[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<HelpdeskFormData>(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  const isEditing = editingSlug !== null;
+
+  function handleOpenCreate() {
+    setEditingSlug(null);
+    setForm(defaultForm);
+    setSlugManuallyEdited(false);
+    setError(undefined);
+    setShowCreateForm(true);
+  }
+
+  function handleOpenEdit(hd: Helpdesk) {
+    setEditingSlug(hd.slug);
+    setForm({
+      name: hd.name,
+      slug: hd.slug,
+      description: hd.description ?? "",
+      tags: (hd.tags ?? []).join(", "),
+      topK: hd.topK ?? 6,
+      systemPrompt: hd.systemPrompt ?? "",
+      retrievalMode: hd.retrievalMode ?? "pageindex",
+      datasetSlug: hd.datasetSlug ?? "",
+    });
+    setSlugManuallyEdited(true);
+    setError(undefined);
+    setShowCreateForm(true);
+  }
+
+  function handleCloseForm() {
+    setShowCreateForm(false);
+    setEditingSlug(null);
+    setError(undefined);
+  }
 
   async function fetchHelpdesks() {
     setIsLoadingList(true);
@@ -87,7 +125,7 @@ export default function DashboardPage() {
     setForm((prev) => ({ ...prev, slug }));
   }
 
-  async function handleCreate(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.slug.trim()) return;
 
@@ -100,16 +138,34 @@ export default function DashboardPage() {
         .map((t) => t.trim())
         .filter(Boolean);
 
-      await apiClient.createHelpdesk({
-        name: form.name.trim(),
-        slug: form.slug.trim(),
-        description: form.description.trim() || undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        topK: form.topK,
-        systemPrompt: form.systemPrompt.trim() || undefined,
-      });
+      const datasetSlug =
+        form.retrievalMode === "amg" ? form.datasetSlug.trim() || undefined : undefined;
+
+      if (isEditing && editingSlug) {
+        await apiClient.updateHelpdesk(editingSlug, {
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          tags,
+          topK: form.topK,
+          systemPrompt: form.systemPrompt.trim() || undefined,
+          retrievalMode: form.retrievalMode,
+          datasetSlug,
+        });
+      } else {
+        await apiClient.createHelpdesk({
+          name: form.name.trim(),
+          slug: form.slug.trim(),
+          description: form.description.trim() || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          topK: form.topK,
+          systemPrompt: form.systemPrompt.trim() || undefined,
+          retrievalMode: form.retrievalMode,
+          datasetSlug,
+        });
+      }
 
       setShowCreateForm(false);
+      setEditingSlug(null);
       setForm(defaultForm);
       setSlugManuallyEdited(false);
       await fetchHelpdesks();
@@ -188,10 +244,7 @@ export default function DashboardPage() {
           </div>
 
           <button
-            onClick={() => {
-              setShowCreateForm(true);
-              setError(undefined);
-            }}
+            onClick={handleOpenCreate}
             className="flex items-center gap-2 rounded-lg bg-mint px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-mint/90 active:scale-[0.98]"
           >
             <Plus size={16} />
@@ -288,6 +341,7 @@ export default function DashboardPage() {
                     Chat
                   </Link>
                   <button
+                    onClick={() => handleOpenEdit(hd)}
                     className="flex items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50"
                     title="Chỉnh sửa helpdesk"
                   >
@@ -308,13 +362,10 @@ export default function DashboardPage() {
             {/* Modal Header */}
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-ink">
-                Tạo Helpdesk mới
+                {isEditing ? "Chỉnh sửa Helpdesk" : "Tạo Helpdesk mới"}
               </h2>
               <button
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setError(undefined);
-                }}
+                onClick={handleCloseForm}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
               >
                 <X size={18} />
@@ -328,7 +379,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-stone-700">
@@ -355,10 +406,15 @@ export default function DashboardPage() {
                   onChange={(e) => handleSlugChange(e.target.value)}
                   placeholder="ho-tro-khach-hang-abc"
                   required
-                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-mono text-stone-800 outline-none transition-colors focus:border-mint focus:ring-2 focus:ring-mint/20"
+                  readOnly={isEditing}
+                  className={`w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-mono text-stone-800 outline-none transition-colors focus:border-mint focus:ring-2 focus:ring-mint/20 ${
+                    isEditing ? "cursor-not-allowed bg-stone-100 text-stone-500" : ""
+                  }`}
                 />
                 <p className="mt-1 text-[11px] text-stone-400">
-                  Tự động tạo từ tên. Có thể chỉnh sửa thủ công.
+                  {isEditing
+                    ? "Slug là định danh cố định, không thể đổi khi chỉnh sửa."
+                    : "Tự động tạo từ tên. Có thể chỉnh sửa thủ công."}
                 </p>
               </div>
 
@@ -436,14 +492,52 @@ export default function DashboardPage() {
                 />
               </div>
 
+              {/* Retrieval Mode */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-stone-700">
+                  Chế độ truy hồi
+                </label>
+                <select
+                  value={form.retrievalMode}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      retrievalMode: e.target.value as HelpdeskFormData["retrievalMode"],
+                    }))
+                  }
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 outline-none transition-colors focus:border-mint focus:ring-2 focus:ring-mint/20"
+                >
+                  <option value="pageindex">PageIndex (tài liệu văn bản)</option>
+                  <option value="amg">AMG (dữ liệu bảng)</option>
+                </select>
+              </div>
+
+              {/* Dataset slug — only for AMG mode */}
+              {form.retrievalMode === "amg" && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-stone-700">
+                    Dataset slug
+                  </label>
+                  <input
+                    type="text"
+                    value={form.datasetSlug}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, datasetSlug: e.target.value }))
+                    }
+                    placeholder="Để trống nếu trùng slug helpdesk"
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-mono text-stone-800 outline-none transition-colors focus:border-mint focus:ring-2 focus:ring-mint/20"
+                  />
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    Slug của bộ dữ liệu đã nạp bằng <code>npm run import:dataset</code>.
+                  </p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex items-center justify-end gap-3 border-t border-stone-100 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setError(undefined);
-                  }}
+                  onClick={handleCloseForm}
                   className="rounded-lg px-4 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
                 >
                   Huỷ
@@ -456,7 +550,15 @@ export default function DashboardPage() {
                   {isSubmitting && (
                     <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   )}
-                  <span>{isSubmitting ? "Đang tạo..." : "Tạo Helpdesk"}</span>
+                  <span>
+                    {isSubmitting
+                      ? isEditing
+                        ? "Đang lưu..."
+                        : "Đang tạo..."
+                      : isEditing
+                        ? "Lưu thay đổi"
+                        : "Tạo Helpdesk"}
+                  </span>
                 </button>
               </div>
             </form>

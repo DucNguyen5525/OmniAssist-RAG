@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatResponse, ChatSession, Helpdesk, HelpdeskDocument, RetrievalResponseItem } from "@helpdesk/shared";
+import type { ChatMessage, ChatResponse, ChatSession, Helpdesk, HelpdeskDocument, ModelsInfo, RetrievalMode, RetrievalResponseItem } from "@helpdesk/shared";
 
 export class ApiError extends Error {
   constructor(
@@ -53,11 +53,12 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify(body)
     }),
-  ask: (body: { question: string; conversationId?: string; tags?: string[]; topK?: number; helpdeskSlug?: string }) =>
+  ask: (body: { question: string; conversationId?: string; tags?: string[]; topK?: number; helpdeskSlug?: string; retrievalMode?: RetrievalMode; model?: string }) =>
     request<ChatResponse>("/api/chat", {
       method: "POST",
       body: JSON.stringify(body)
     }),
+  listModels: () => request<{ data: ModelsInfo }>("/api/models"),
   retrieve: (body: { query: string; tags?: string[]; topK?: number }) =>
     request<{ data: RetrievalResponseItem[] }>("/api/chat/retrieve", {
       method: "POST",
@@ -78,7 +79,7 @@ export const apiClient = {
   // Helpdesks
   listHelpdesks: () =>
     request<{ data: Helpdesk[] }>("/api/helpdesks"),
-  createHelpdesk: (body: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string }) =>
+  createHelpdesk: (body: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string }) =>
     request<{ data: Helpdesk }>("/api/helpdesks", { method: "POST", body: JSON.stringify(body) }),
   getHelpdesk: (slug: string) =>
     request<{ data: Helpdesk }>(`/api/helpdesks/${slug}`),
