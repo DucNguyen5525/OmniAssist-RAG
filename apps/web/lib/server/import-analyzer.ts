@@ -66,7 +66,8 @@ function parseSuggestion(raw: string): Partial<ImportSuggestion> | null {
   return null;
 }
 
-function normalizeSuggestion(
+// exported for unit tests
+export function normalizeSuggestion(
   parsed: Partial<ImportSuggestion>,
   candidateTitle: string,
   existingSlugs: Set<string>

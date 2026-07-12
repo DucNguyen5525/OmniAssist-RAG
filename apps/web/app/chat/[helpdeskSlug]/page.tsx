@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChatSession, Helpdesk, SourceReference } from "@helpdesk/shared";
+import type { ChatSession, Helpdesk, MessageFeedback, SourceReference } from "@helpdesk/shared";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -18,6 +18,7 @@ interface UiMessage {
   role: "user" | "assistant";
   content: string;
   sources?: SourceReference[];
+  feedback?: MessageFeedback | null;
 }
 
 export default function HelpdeskChatPage() {
@@ -112,6 +113,7 @@ export default function HelpdeskChatPage() {
           role: m.role === "system" ? "assistant" : m.role,
           content: m.content,
           sources: m.sources,
+          feedback: m.feedback,
         }))
       );
     } catch (err) {
@@ -167,29 +169,60 @@ export default function HelpdeskChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.ask({
-        question: trimmed,
-        conversationId: activeSessionId,
-        topK: helpdesk?.topK ?? settings.topK,
-        tags: helpdesk?.tags?.length ? helpdesk.tags : parseTags(settings.tags),
-        helpdeskSlug,
-        retrievalMode: helpdesk?.retrievalMode ?? settings.retrievalMode,
-        model: selectedModel || undefined,
-      });
+      let streamConversationId: string | undefined;
 
-      if (!activeSessionId) {
-        setActiveSessionId(response.conversationId);
+      // Updates the assistant message currently being streamed (always the last one)
+      const patchLastAssistant = (patch: Partial<UiMessage> | ((last: UiMessage) => Partial<UiMessage>)) => {
+        setMessages((current) => {
+          const last = current[current.length - 1];
+          if (!last || last.role !== "assistant") return current;
+          const resolved = typeof patch === "function" ? patch(last) : patch;
+          return [...current.slice(0, -1), { ...last, ...resolved }];
+        });
+      };
+
+      await apiClient.askStream(
+        {
+          question: trimmed,
+          conversationId: activeSessionId,
+          topK: helpdesk?.topK ?? settings.topK,
+          tags: helpdesk?.tags?.length ? helpdesk.tags : parseTags(settings.tags),
+          helpdeskSlug,
+          retrievalMode: helpdesk?.retrievalMode ?? settings.retrievalMode,
+          model: selectedModel || undefined,
+        },
+        (event) => {
+          if (event.type === "meta") {
+            streamConversationId = event.conversationId;
+            setMessages((current) => [...current, { role: "assistant", content: "", sources: event.sources }]);
+          } else if (event.type === "delta") {
+            patchLastAssistant((last) => ({ content: last.content + event.text }));
+          } else if (event.type === "done") {
+            patchLastAssistant({ id: event.messageId });
+          } else if (event.type === "error") {
+            setError(event.message);
+          }
+        }
+      );
+
+      if (!activeSessionId && streamConversationId) {
+        setActiveSessionId(streamConversationId);
         await fetchSessions();
       }
-
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: response.answer, sources: response.sources },
-      ]);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Optimistic feedback toggle persisted through the messages API
+  async function handleFeedback(messageId: string, feedback: MessageFeedback | null) {
+    setMessages((current) => current.map((m) => (m.id === messageId ? { ...m, feedback } : m)));
+    try {
+      await apiClient.setMessageFeedback(messageId, feedback);
+    } catch (err) {
+      setError(getErrorMessage(err));
     }
   }
 
@@ -289,10 +322,13 @@ export default function HelpdeskChatPage() {
                   role={msg.role}
                   content={msg.content}
                   sources={msg.sources}
+                  messageId={msg.id}
+                  feedback={msg.feedback}
+                  onFeedback={msg.role === "assistant" ? handleFeedback : undefined}
                 />
               ))}
 
-              {isLoading ? (
+              {isLoading && messages[messages.length - 1]?.role === "user" ? (
                 <div className="flex items-center gap-3 bg-stone-50/50 py-5 px-6 max-w-4xl mx-auto text-sm text-stone-500">
                   <div className="flex h-2 w-2 animate-ping rounded-full bg-mint" />
                   <span>Đang tìm kiếm tài liệu & tạo câu trả lời...</span>

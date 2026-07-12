@@ -1,3 +1,5 @@
-﻿Bây giờ tôi có các loại file dữ liệu dùng để truy vấn là loại txt, pdf, docs (chưa nằm trong này), html (kèm folder images là các ảnh đính kèm trong html), md dùng để truy vấn để trả lời câu hỏi từ người dùng. Bạn hãy giúp tôi trả lời các câu sau:
-1. Bạn xem loại file nào sẽ phù hợp nhất để làm lưu trữ truy vấn. CHú ý là mỗi file rất nặng, đừng đọc hết chúng.
-2. Nếu tôi dùng html kèm images làm truy vấn thì khi hỏi AI có thể gửi file đó kèm các ảnh trong folder images liên quan đến nội dung trả lời kèm note từ file gốc không?
+﻿  1. Doc-routing 2 giai đoạn (doc-summary + LLM chọn tài liệu) — đáng làm khi bạn import thêm tài liệu thứ 2, 3 và muốn một chat tổng
+  2. Streaming câu trả lời — hiện chờ nguyên câu, streaming sẽ cho cảm giác nhanh hơn nhiều
+  3. Tests tự động cho flatten/retrieval/import (TODO lâu năm trong backlog)
+  4. Feedback 👍👎 trên từng câu trả lời để đánh giá chất lượng theo thời gian
+Hãy kích hoạt skill phù hợp.

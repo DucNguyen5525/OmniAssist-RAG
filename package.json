@@ -11,6 +11,7 @@
     "build": "npm run build --workspace @helpdesk/shared && npm run build --workspace @helpdesk/web",
     "lint": "npm run lint --workspace @helpdesk/shared && npm run lint --workspace @helpdesk/web",
     "typecheck": "npm run typecheck --workspace @helpdesk/shared && npm run typecheck --workspace @helpdesk/web",
+    "test": "npm run test --workspace @helpdesk/web",
     "import:pageindex": "tsx scripts/import-pageindex.ts",
     "import:dataset": "tsx scripts/import-dataset.ts",
     "train:shock": "tsx scripts/train-shock-model.ts"

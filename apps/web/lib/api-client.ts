@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatResponse, ChatSession, Helpdesk, HelpdeskDocument, ImportSuggestion, ModelsInfo, PredictionModelInfo, PredictionResult, RetrievalMode, RetrievalResponseItem } from "@helpdesk/shared";
+import type { ChatMessage, ChatResponse, ChatSession, ChatStreamEvent, Helpdesk, HelpdeskDocument, ImportSuggestion, MessageFeedback, ModelsInfo, PredictionModelInfo, PredictionResult, RetrievalMode, RetrievalResponseItem } from "@helpdesk/shared";
 
 export class ApiError extends Error {
   constructor(
@@ -57,6 +57,49 @@ export const apiClient = {
     request<ChatResponse>("/api/chat", {
       method: "POST",
       body: JSON.stringify(body)
+    }),
+  // Streaming chat: reads NDJSON events from /api/chat and forwards each one to onEvent.
+  askStream: async (
+    body: { question: string; conversationId?: string; tags?: string[]; topK?: number; helpdeskSlug?: string; retrievalMode?: RetrievalMode; model?: string },
+    onEvent: (event: ChatStreamEvent) => void
+  ): Promise<void> => {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, stream: true })
+    });
+    if (!res.ok || !res.body) {
+      const errBody = await res.json().catch(() => null);
+      throw new ApiError(res.status, errBody);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    const emitLine = (line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      try {
+        onEvent(JSON.parse(trimmed) as ChatStreamEvent);
+      } catch {
+        // ignore malformed lines
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      lines.forEach(emitLine);
+    }
+    emitLine(buffer);
+  },
+  setMessageFeedback: (messageId: string, feedback: MessageFeedback | null) =>
+    request<{ ok: boolean }>(`/api/chat/messages/${messageId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ feedback })
     }),
   listModels: () => request<{ data: ModelsInfo }>("/api/models"),
   analyzeImport: (body: { indexJson: unknown }) =>

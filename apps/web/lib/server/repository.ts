@@ -11,6 +11,7 @@ export interface DocumentRecord extends MongoDocument {
   status: "ready" | "processing" | "failed";
   version?: string;
   tags: string[];
+  docSummary?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +62,7 @@ export interface MessageRecord extends MongoDocument {
   role: "user" | "assistant" | "system";
   content: string;
   sources: SourceReference[];
+  feedback?: "up" | "down" | null;
   createdAt: Date;
 }
 
@@ -114,6 +116,7 @@ export function serializeDocument(record: DocumentRecord): HelpdeskDocument {
     status: record.status,
     version: record.version,
     tags: record.tags ?? [],
+    docSummary: record.docSummary,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
   };
@@ -156,6 +159,7 @@ export function serializeMessage(record: MessageRecord): ChatMessage {
     role: record.role,
     content: record.content,
     sources: record.sources ?? [],
+    feedback: record.feedback ?? null,
     createdAt: record.createdAt.toISOString()
   };
 }
@@ -228,6 +232,7 @@ export async function upsertDocumentWithNodes(input: {
   indexFileUrl?: string;
   version?: string;
   tags?: string[];
+  docSummary?: string;
   nodes: CreatePageIndexNodeInput[];
 }) {
   await ensureMongoIndexes();
@@ -247,6 +252,8 @@ export async function upsertDocumentWithNodes(input: {
         status: "ready",
         version: input.version,
         tags: input.tags ?? [],
+        // keep the previous summary when regeneration was skipped or failed
+        ...(input.docSummary !== undefined ? { docSummary: input.docSummary } : {}),
         updatedAt: now
       },
       $setOnInsert: {
@@ -346,6 +353,14 @@ export async function addMessage(input: {
   const saved = await db.collection<MessageRecord>("messages").findOne({ _id: result.insertedId });
   if (!saved) throw new Error("Failed to save message");
   return serializeMessage(saved);
+}
+
+export async function setMessageFeedback(messageId: string, feedback: "up" | "down" | null) {
+  const db = await getDb();
+  const result = await db
+    .collection<MessageRecord>("messages")
+    .updateOne({ _id: toObjectId(messageId), role: "assistant" }, { $set: { feedback } });
+  return result.matchedCount > 0;
 }
 
 export async function listHelpdesks(): Promise<Helpdesk[]> {

@@ -239,6 +239,56 @@ export class ResilientGCLIClient {
 
     throw lastError ?? new Error("All key attempts failed.");
   }
+
+  // Streaming variant: rotates keys until a connection succeeds, then yields content deltas.
+  public async createChatCompletionStream(
+    model: string,
+    messages: Array<{ role: string; content: string }>,
+    options: Record<string, unknown> = {}
+  ): Promise<AsyncGenerator<string, void, unknown>> {
+    const maxRetries = this.rotator.keysConfig.length;
+    let attempts = 0;
+    let lastError: Error | null = null;
+
+    while (attempts < maxRetries) {
+      const keyInfo = this.rotator.getNextKey();
+      attempts++;
+
+      const resolvedModel = resolveGcliModelCode(model);
+      const endpoint = `${this.baseUrl}/chat/completions`;
+      console.log(`🔄 [Stream attempt ${attempts}/${maxRetries}] Using Key: '${keyInfo.label}' for model '${resolvedModel}'...`);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${keyInfo.key}`,
+          },
+          body: JSON.stringify({
+            model: resolvedModel,
+            messages,
+            stream: true,
+            ...options,
+          }),
+        });
+
+        if (!response.ok || !response.body) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        console.log(`✅ Stream connected using Key: '${keyInfo.label}'`);
+        return parseSseContentDeltas(response.body);
+      } catch (error) {
+        const errObj = error instanceof Error ? error : new Error(String(error));
+        console.warn(`⚠️ Stream error using key '${keyInfo.label}': ${errObj.message}`);
+        lastError = errObj;
+      }
+    }
+
+    throw lastError ?? new Error("All key attempts failed.");
+  }
 }
 
 let clientInstance: ResilientGCLIClient | null = null;
@@ -286,21 +336,54 @@ export async function generateGroundedAnswer(
   model?: string
 ) {
   if (retrievedNodes.length === 0) {
-    return "Tôi chưa tìm thấy đủ thông tin trong tài liệu hiện có để trả lời câu hỏi này.";
+    return NO_CONTEXT_ANSWER;
   }
 
   const { client } = getResilientClient();
   const resolvedModel = resolveRequestedModel(model);
-  const context = buildContextBlock(retrievedNodes);
+  const prompt = buildGroundedPrompt(question, retrievedNodes, systemPrompt);
 
+  const result = await client.createChatCompletion(resolvedModel, [
+    { role: "user", content: prompt },
+  ]);
+
+  return result.content.trim();
+}
+
+// Streaming variant used by /api/chat when the client asks for `stream: true`.
+export async function* generateGroundedAnswerStream(
+  question: string,
+  retrievedNodes: RetrievedNode[],
+  systemPrompt?: string,
+  model?: string
+): AsyncGenerator<string, void, unknown> {
+  if (retrievedNodes.length === 0) {
+    yield NO_CONTEXT_ANSWER;
+    return;
+  }
+
+  const { client } = getResilientClient();
+  const resolvedModel = resolveRequestedModel(model);
+  const prompt = buildGroundedPrompt(question, retrievedNodes, systemPrompt);
+
+  const deltas = await client.createChatCompletionStream(resolvedModel, [
+    { role: "user", content: prompt },
+  ]);
+  yield* deltas;
+}
+
+const NO_CONTEXT_ANSWER = "Tôi chưa tìm thấy đủ thông tin trong tài liệu hiện có để trả lời câu hỏi này.";
+
+function buildGroundedPrompt(question: string, retrievedNodes: RetrievedNode[], systemPrompt?: string) {
+  const context = buildContextBlock(retrievedNodes);
   const systemPreamble = systemPrompt ? `${systemPrompt}\n\n` : "";
 
-  const prompt = `${systemPreamble}You are a precise helpdesk assistant. Answer the user's question using only the PageIndex context below.
+  return `${systemPreamble}You are a precise helpdesk assistant. Answer the user's question using only the PageIndex context below.
 
 Rules:
 - Do not use outside knowledge.
 - Do not invent policies, prices, names, instructions, dates, or technical details.
-- If the context is insufficient, say in Vietnamese: "Tôi chưa tìm thấy đủ thông tin trong tài liệu hiện có để trả lời câu hỏi này."
+- If the context is insufficient, say in Vietnamese: "${NO_CONTEXT_ANSWER}"
 - Answer in Vietnamese by default.
 - Keep the answer clear, direct, and helpful.
 - Include source references using document title and section/path when possible.
@@ -318,12 +401,40 @@ ${context}
 
 Question:
 ${question}`;
+}
 
-  const result = await client.createChatCompletion(resolvedModel, [
-    { role: "user", content: prompt },
-  ]);
+// Parses an OpenAI-compatible SSE body into content delta strings.
+async function* parseSseContentDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string, void, unknown> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-  return result.content.trim();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === "[DONE]") return;
+        try {
+          const json = JSON.parse(payload) as { choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }> };
+          const delta = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.message?.content ?? "";
+          if (delta) yield delta;
+        } catch {
+          // skip malformed SSE chunks
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 

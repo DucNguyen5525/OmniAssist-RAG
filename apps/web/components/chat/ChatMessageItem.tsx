@@ -1,7 +1,7 @@
 "use client";
 
-import type { SourceReference } from "@helpdesk/shared";
-import { Bot, Check, Copy, FileText, User } from "lucide-react";
+import type { MessageFeedback, SourceReference } from "@helpdesk/shared";
+import { Bot, Check, Copy, FileText, ThumbsDown, ThumbsUp, User } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,9 +10,12 @@ interface ChatMessageItemProps {
   role: "user" | "assistant";
   content: string;
   sources?: SourceReference[];
+  messageId?: string;
+  feedback?: MessageFeedback | null;
+  onFeedback?: (messageId: string, feedback: MessageFeedback | null) => void;
 }
 
-export function ChatMessageItem({ role, content, sources }: ChatMessageItemProps) {
+export function ChatMessageItem({ role, content, sources, messageId, feedback, onFeedback }: ChatMessageItemProps) {
   const [copied, setCopied] = useState(false);
   const [showSources, setShowSources] = useState(true);
 
@@ -48,14 +51,42 @@ export function ChatMessageItem({ role, content, sources }: ChatMessageItemProps
             </span>
 
             {!isUser ? (
-              <button
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 text-xs text-stone-500 opacity-0 transition-opacity hover:text-stone-800 group-hover:opacity-100 focus:opacity-100"
-                title="Copy response"
-              >
-                {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                <span>{copied ? "Copied" : "Copy"}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {messageId && onFeedback ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onFeedback(messageId, feedback === "up" ? null : "up")}
+                      className={`rounded p-1 transition-colors ${
+                        feedback === "up"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "text-stone-400 opacity-0 hover:text-emerald-600 group-hover:opacity-100 focus:opacity-100"
+                      }`}
+                      title="Câu trả lời hữu ích"
+                    >
+                      <ThumbsUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => onFeedback(messageId, feedback === "down" ? null : "down")}
+                      className={`rounded p-1 transition-colors ${
+                        feedback === "down"
+                          ? "bg-rose-100 text-rose-600"
+                          : "text-stone-400 opacity-0 hover:text-rose-600 group-hover:opacity-100 focus:opacity-100"
+                      }`}
+                      title="Câu trả lời chưa tốt"
+                    >
+                      <ThumbsDown size={14} />
+                    </button>
+                  </div>
+                ) : null}
+                <button
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1 text-xs text-stone-500 opacity-0 transition-opacity hover:text-stone-800 group-hover:opacity-100 focus:opacity-100"
+                  title="Copy response"
+                >
+                  {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
             ) : null}
           </div>
 

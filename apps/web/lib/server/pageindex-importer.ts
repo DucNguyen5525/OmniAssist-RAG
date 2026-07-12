@@ -1,4 +1,5 @@
-﻿import { flattenPageIndexTree } from "./pageindex-flatten";
+﻿import { generateDocSummary } from "./doc-router";
+import { flattenPageIndexTree } from "./pageindex-flatten";
 import { upsertDocumentWithNodes } from "./repository";
 import { uploadJsonToR2 } from "./r2";
 
@@ -25,6 +26,14 @@ export async function importPageIndex(input: ImportPageIndexInput) {
     indexFileUrl = await uploadJsonToR2(key, input.indexJson);
   }
 
+  // Document-level summary powers 2-stage doc routing; import must not fail because of it.
+  let docSummary: string | undefined;
+  try {
+    docSummary = await generateDocSummary(input.title, nodes);
+  } catch (error) {
+    console.warn("Doc summary generation failed:", error instanceof Error ? error.message : error);
+  }
+
   return upsertDocumentWithNodes({
     title: input.title,
     slug: input.slug,
@@ -32,6 +41,7 @@ export async function importPageIndex(input: ImportPageIndexInput) {
     indexFileUrl,
     version: input.version,
     tags: input.tags ?? [],
+    docSummary,
     nodes
   });
 }

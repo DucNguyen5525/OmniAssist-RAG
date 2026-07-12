@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import type { RetrievalMode, SourceReference } from "@helpdesk/shared";
+import type { ChatStreamEvent, RetrievalMode, SourceReference } from "@helpdesk/shared";
 import { z } from "zod";
-import { generateGroundedAnswer } from "@/lib/server/gemini";
+import { routeDocuments } from "@/lib/server/doc-router";
+import { generateGroundedAnswer, generateGroundedAnswerStream } from "@/lib/server/gemini";
 import {
   addMessage,
   createConversation,
   getDatasetBySlug,
   getDatasetRows,
-  getHelpdeskBySlug
+  getHelpdeskBySlug,
+  listReadyDocuments
 } from "@/lib/server/repository";
 import { retrievePageIndexNodes, toSourceReference } from "@/lib/server/retrieval";
 import { generateTabularAnswer } from "@/lib/server/tabular-qa";
@@ -21,7 +23,8 @@ const chatSchema = z.object({
   topK: z.number().int().min(1).max(12).optional(),
   helpdeskSlug: z.string().optional(),
   retrievalMode: z.enum(["pageindex", "amg"]).optional(),
-  model: z.string().max(100).optional()
+  model: z.string().max(100).optional(),
+  stream: z.boolean().optional()
 });
 
 export async function POST(request: Request) {
@@ -57,29 +60,80 @@ export async function POST(request: Request) {
       }
     }
 
-    let answer: string;
-    let sources: SourceReference[];
-
     if (retrievalMode === "amg") {
       const result = await answerWithDataset(input.question, datasetSlug, systemPrompt, model);
-      answer = result.answer;
-      sources = result.sources;
-    } else {
-      const retrieved = await retrievePageIndexNodes({ query: input.question, tags, documentSlugs, topK });
-      answer = await generateGroundedAnswer(input.question, retrieved, systemPrompt, model);
-      sources = retrieved.map(toSourceReference);
+      const saved = await addMessage({ conversationId: conversation.id, role: "assistant", content: result.answer, sources: result.sources });
+      if (input.stream) {
+        // AMG numbers are computed in TS, not streamed: emit the finished answer as one delta.
+        return ndjsonResponse([
+          { type: "meta", conversationId: conversation.id, sources: result.sources },
+          { type: "delta", text: result.answer },
+          { type: "done", messageId: saved.id }
+        ]);
+      }
+      return NextResponse.json({ conversationId: conversation.id, answer: result.answer, sources: result.sources, messageId: saved.id });
     }
 
-    await addMessage({ conversationId: conversation.id, role: "assistant", content: answer, sources });
+    // Stage 1: with several candidate documents, let the LLM route the question first.
+    let routedSlugs = documentSlugs;
+    const candidates = await listReadyDocuments({ tags, slugs: documentSlugs });
+    if (candidates.length > 1) {
+      routedSlugs = await routeDocuments(input.question, candidates, model);
+    } else if (candidates.length === 1) {
+      routedSlugs = [candidates[0].slug];
+    }
 
-    return NextResponse.json({
-      conversationId: conversation.id,
-      answer,
-      sources
+    // Stage 2: lexical PageIndex retrieval inside the routed documents.
+    const retrieved = await retrievePageIndexNodes({ query: input.question, tags, documentSlugs: routedSlugs, topK });
+    const sources = retrieved.map(toSourceReference);
+
+    if (!input.stream) {
+      const answer = await generateGroundedAnswer(input.question, retrieved, systemPrompt, model);
+      const saved = await addMessage({ conversationId: conversation.id, role: "assistant", content: answer, sources });
+      return NextResponse.json({ conversationId: conversation.id, answer, sources, messageId: saved.id });
+    }
+
+    const conversationId = conversation.id;
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (event: ChatStreamEvent) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        try {
+          send({ type: "meta", conversationId, sources });
+          let fullAnswer = "";
+          for await (const delta of generateGroundedAnswerStream(input.question, retrieved, systemPrompt, model)) {
+            fullAnswer += delta;
+            send({ type: "delta", text: delta });
+          }
+          const saved = await addMessage({ conversationId, role: "assistant", content: fullAnswer.trim(), sources });
+          send({ type: "done", messageId: saved.id });
+        } catch (error) {
+          send({ type: "error", message: error instanceof Error ? error.message : "Unexpected error" });
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Cache-Control": "no-cache"
+      }
     });
   } catch (error) {
     return handleApiError(error);
   }
+}
+
+function ndjsonResponse(events: ChatStreamEvent[]) {
+  const body = events.map((event) => `${JSON.stringify(event)}\n`).join("");
+  return new Response(body, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache"
+    }
+  });
 }
 
 async function answerWithDataset(

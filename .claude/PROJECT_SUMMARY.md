@@ -1,7 +1,7 @@
 # Project Summary
 
 **Last Updated:** 2026-07-12 +07:00  
-**Session:** #18 - MD → PageIndex pipeline for Tech Support Manual; per-request model selection; retrieval scoring rebalance
+**Session:** #19 - 2-stage doc routing, streaming answers, 👍👎 feedback, vitest unit tests
 
 ---
 
@@ -95,8 +95,9 @@ Frontend calls same-origin Next API routes through `apps/web/lib/api-client.ts`.
 /api/auth/check                 Auth check API
 /api/helpdesks                  Helpdesk list/create API
 /api/helpdesks/[slug]           Helpdesk get/update/delete API
-/api/chat                       Chat Q&A API (supports helpdeskSlug, model)
+/api/chat                       Chat Q&A API (supports helpdeskSlug, model, stream:true → NDJSON events)
 /api/chat/sessions/[id]         DELETE: remove conversation + its messages
+/api/chat/messages/[id]         PATCH: set 👍👎 feedback on an assistant message
 /api/documents/analyze          POST: AI suggests import action (new/update, slug, tags)
 /api/models                     Available AI models list (GCLI_MODELS + default)
 ```
@@ -129,6 +130,10 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Images in chat answers | Completed | `scripts/process-doc-images.ts`, `retrieval.ts` (images in SourceReference), `gemini.ts` prompt, `ChatMessageItem.tsx`, `apps/web/public/doc-images/` | sharp: normalize + sharpen + WebP q82 (29.3MB→7.5MB, 561 files); JSON refs rewritten to `/doc-images/<slug>/*.webp` then re-imported; citations show clickable thumbnails; LLM inlines exact image tags when a step is illustrated. `sharp` is a root devDependency (script-only). |
 | Delete chat session | Completed | `repository.ts` (deleteConversation), `DELETE /api/chat/sessions/[id]`, `api-client.ts`, `ChatSidebar.tsx`, chat page | Trash icon per sidebar session (hover) + header "Xóa chat" for active session → custom confirmation modal → deletes conversation + messages from MongoDB. Header button on an unsaved chat just resets the view. Browser-verified incl. reload. |
 | Per-request AI model selection | Completed | `env.ts`, `gemini.ts`, `/api/models`, `/api/chat`, `ChatHeader.tsx`, chat page, `settings.ts` | `GCLI_MODELS` env lists allowed models; chat header dropdown lets user pick (saved in local storage); priority request model → helpdesk.model → `GCLI_MODEL` default; invalid model silently falls back to default. |
+| 2-stage doc routing | Completed | `doc-router.ts`, `pageindex-importer.ts`, `repository.ts` (docSummary), `/api/chat` | Import generates a Vietnamese `docSummary` per document (best-effort, never blocks import); when a chat has >1 candidate documents the LLM routes the question to the relevant slugs first, then lexical retrieval runs inside them. Falls back to all candidates on router failure. E2E verified: warranty question → warranty doc, DEJAVOO question → tech-support-manual. |
+| Streaming chat answers | Completed | `gemini.ts` (createChatCompletionStream + generateGroundedAnswerStream), `/api/chat` (stream flag → NDJSON), `api-client.ts` (askStream), chat page | GCLI SSE deltas piped as NDJSON events (`meta` with sources → `delta`s → `done` with messageId; `error` on failure). Assistant message saved to Mongo after the stream completes. AMG mode replies as one delta (numbers computed in TS). Frontend renders deltas incrementally. |
+| 👍👎 answer feedback | Completed | shared `MessageFeedback`, `repository.ts` (setMessageFeedback), `PATCH /api/chat/messages/[id]`, `ChatMessageItem.tsx`, chat page | Hover thumbs on assistant messages; toggle persists `feedback: up/down/null` on the message record (optimistic UI). Loaded back with session history. |
+| Vitest unit tests | Completed | `apps/web/lib/server/__tests__/*` (14 tests), `scoreCandidates` export in `retrieval.ts` | `npm run test` → flattenPageIndexTree (tree/paths/dedup/fallbacks), retrieval scoring (IDF ranking, phrase bonus, stuffing cap, zero-score) + extractImageUrls, import-analyzer normalizeSuggestion. Tests exposed & fixed a bug: level≤1 bonus no longer lets non-matching nodes pass the score>0 filter. |
 | Tabular-QA retrieval mode (`amg`) | Completed | `tabular-qa.ts`, `/api/chat`, `import-dataset.ts`, dashboard/settings UI | LLM plans query → code computes count/proportion (categorical equals OR numeric threshold via compare/value)/mean/median/min/max/groupBy/correlation over `dataset_rows`; numbers computed in TS (not LLM). Per-helpdesk `retrievalMode` + `datasetSlug`. Ingest of dengue CSV/XLS is user-run. |
 | Shock-risk prediction | Completed | `prediction.ts`, `scripts/train-shock-model.ts`, `/api/predict`, `/predict/[modelSlug]`, repository `prediction_models` | TS logistic regression on paper1 `dengue-baseline` enrolment features (no leakage); 5-fold CV AUROC 0.787; artifact stored in Mongo; `/api/predict` GET model info + POST case→probability + top contributions; `/predict/shock-baseline` case-input form (public route). Research tool only, not clinical. Train via `npm run train:shock`. |
 | GCLI Key Rotation LLM layer | Completed | `gemini.ts`, `env.ts`, `/api/chat` | Replaces raw Gemini SDK with SWRR/Weighted Random key rotation, failover, model mapping. |
@@ -139,7 +144,6 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Tech Support Manual ingest + E2E test | Completed | MongoDB `tech-support-manual` doc | Imported (155 nodes, tags `helpdesk`,`tech-support`); chat E2E verified: DEJAVOO double-item question (VI + EN) and tip-setup question answered correctly with DEJAVOO ISSUES / Set up Tip citations. |
 | Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Not run in Vercel runtime. |
 | Authentication | Planning | None | Needed before public use. |
-| Automated tests | Planning | None | Not added yet. |
 
 **Legend:** Planning / In Progress / Completed
 
@@ -163,14 +167,15 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [x] Images in chat answers: 561 images enhanced (normalize+sharpen) → WebP (29.3MB→7.5MB) in `apps/web/public/doc-images/tech-support-manual/`; node refs rewritten to `/doc-images/...webp`; sources carry `images[]` (thumbnails in citations drawer); Gemini instructed to inline relevant image tags (verified: Clerk ID answer embedded image453 at the right step). R2 hosting can replace public/ later if credentials are configured.
 - [ ] End-to-end test `amg` mode against a real dataset (e.g. verify proportion queries match the paper reports).
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
-- [ ] Add tests for `flattenPageIndexTree`, retrieval scoring, import route, and chat route with mocked Gemini.
+- [x] Add tests for `flattenPageIndexTree`, retrieval scoring, and import-analyzer normalization (vitest, 14 tests; chat route with mocked Gemini still open).
 - [ ] Physically delete `apps/api/` and `supabase/` on a machine where Windows filesystem permits deletion.
 
 ### Low Priority / Nice to Have
 
 - [ ] Add richer PageIndex schema normalization if real PageIndex JSON differs from supported shapes.
-- [ ] Add streaming Gemini responses.
-- [ ] Add feedback UI and API route for `feedback` collection.
+- [x] Add streaming Gemini responses (NDJSON stream via /api/chat).
+- [x] Add feedback UI and API route (stored on the message record, not a separate collection).
+- [ ] Add tests for the chat route with mocked Gemini.
 
 ---
 
@@ -186,6 +191,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - `@aws-sdk/client-s3` - S3-compatible Cloudflare R2 client.
 - `zod` - API validation.
 - `tsx` - Local TypeScript import script runner.
+- `vitest` (devDependency in apps/web) - Unit tests for flatten/retrieval/import-analyzer.
 - `xlsx` (devDependency) - Parses CSV/XLS in `scripts/import-dataset.ts`; not in Vercel runtime bundle.
 
 ### External APIs / Services
@@ -232,6 +238,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 npm install
 npm run dev --workspace @helpdesk/web
 npm run typecheck
+npm run test
 npm run build
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
 ```

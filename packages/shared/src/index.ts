@@ -11,9 +11,12 @@ export interface HelpdeskDocument {
   status: DocumentStatus;
   version?: string;
   tags: string[];
+  docSummary?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type MessageFeedback = "up" | "down";
 
 export interface PageIndexNode {
   id: string;
@@ -53,6 +56,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   sources: SourceReference[];
+  feedback?: MessageFeedback | null;
   createdAt: string;
 }
 
@@ -68,7 +72,15 @@ export interface ChatResponse {
   conversationId: string;
   answer: string;
   sources: SourceReference[];
+  messageId?: string;
 }
+
+/** NDJSON events emitted by POST /api/chat when `stream: true`. */
+export type ChatStreamEvent =
+  | { type: "meta"; conversationId: string; sources: SourceReference[] }
+  | { type: "delta"; text: string }
+  | { type: "done"; messageId?: string }
+  | { type: "error"; message: string };
 
 export interface ModelsInfo {
   models: string[];

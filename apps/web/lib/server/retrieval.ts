@@ -22,19 +22,13 @@ export async function retrievePageIndexNodes(input: RetrievePageIndexInput): Pro
   const nodes = await getNodesForDocuments(documents.map((doc) => doc._id));
   const documentById = new Map(documents.map((doc) => [doc._id.toString(), doc]));
 
-  const fields = nodes.map((node) => ({
-    title: normalize(node.title),
-    path: normalize((node.path ?? []).join(" ")),
-    summary: normalize(node.summary ?? ""),
-    content: normalize(node.content ?? "")
-  }));
-  const idf = buildIdf(tokenize(input.query), fields);
+  const scores = scoreCandidates(input.query, nodes);
 
   const scored = nodes
     .map((node, index) => ({
       node,
       document: documentById.get(node.documentId.toString()),
-      score: scoreNode(input.query, fields[index], node.level, idf)
+      score: scores[index]
     }))
     .filter((item): item is RetrievedNode => Boolean(item.document) && item.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -61,7 +55,7 @@ export function toSourceReference(item: RetrievedNode): SourceReference {
 
 const MAX_SOURCE_IMAGES = 6;
 
-function extractImageUrls(content: string): string[] | undefined {
+export function extractImageUrls(content: string): string[] | undefined {
   const urls: string[] = [];
   const pattern = /!\[[^\]]*\]\((\/[^)\s]+\.(?:webp|png|jpe?g|gif))\)/gi;
   let match: RegExpExecArray | null;
@@ -95,6 +89,26 @@ export function buildContextBlock(items: RetrievedNode[]) {
         .join("\n");
     })
     .join("\n\n---\n\n");
+}
+
+export interface ScoreCandidate {
+  title: string;
+  path?: string[];
+  summary?: string;
+  content: string;
+  level?: number;
+}
+
+// Pure lexical scoring over candidate nodes; exported so tests can run it without MongoDB.
+export function scoreCandidates(query: string, candidates: ScoreCandidate[]): number[] {
+  const fields = candidates.map((candidate) => ({
+    title: normalize(candidate.title),
+    path: normalize((candidate.path ?? []).join(" ")),
+    summary: normalize(candidate.summary ?? ""),
+    content: normalize(candidate.content ?? "")
+  }));
+  const idf = buildIdf(tokenize(query), fields);
+  return candidates.map((candidate, index) => scoreNode(query, fields[index], candidate.level ?? 0, idf));
 }
 
 interface NodeFields {
@@ -156,7 +170,8 @@ function scoreNode(query: string, fields: NodeFields, level: number, idf: Map<st
     if (content.includes(phrase)) score += 5;
   }
 
-  if (level <= 1) score += 0.5;
+  // small tiebreaker for top-level sections, but never lets a non-matching node pass the score>0 filter
+  if (score > 0 && level <= 1) score += 0.5;
   return score;
 }
 
