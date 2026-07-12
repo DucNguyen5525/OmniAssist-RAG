@@ -374,7 +374,8 @@ export async function* generateGroundedAnswerStream(
 
 const NO_CONTEXT_ANSWER = "Tôi chưa tìm thấy đủ thông tin trong tài liệu hiện có để trả lời câu hỏi này.";
 
-function buildGroundedPrompt(question: string, retrievedNodes: RetrievedNode[], systemPrompt?: string) {
+// Exported so scripts/debug-retrieval.ts can print the exact prompt sent to the model.
+export function buildGroundedPrompt(question: string, retrievedNodes: RetrievedNode[], systemPrompt?: string) {
   const context = buildContextBlock(retrievedNodes);
   const systemPreamble = systemPrompt ? `${systemPrompt}\n\n` : "";
 

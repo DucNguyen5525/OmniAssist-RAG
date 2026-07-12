@@ -3,18 +3,22 @@ import type { ChatStreamEvent, RetrievalMode, SourceReference } from "@helpdesk/
 import { z } from "zod";
 import { routeDocuments } from "@/lib/server/doc-router";
 import { generateGroundedAnswer, generateGroundedAnswerStream } from "@/lib/server/gemini";
+import { rewriteFollowupQuestion } from "@/lib/server/question-rewriter";
 import {
   addMessage,
   createConversation,
   getDatasetBySlug,
   getDatasetRows,
   getHelpdeskBySlug,
+  listMessages,
   listReadyDocuments
 } from "@/lib/server/repository";
 import { retrievePageIndexNodes, toSourceReference } from "@/lib/server/retrieval";
 import { generateTabularAnswer } from "@/lib/server/tabular-qa";
 
 export const runtime = "nodejs";
+
+const MAX_QUESTIONS_PER_SESSION = 6;
 
 const chatSchema = z.object({
   question: z.string().min(1),
@@ -30,6 +34,16 @@ const chatSchema = z.object({
 export async function POST(request: Request) {
   try {
     const input = chatSchema.parse(await request.json());
+    // History fetched before saving the new user message, so it holds prior turns only.
+    const history = input.conversationId ? await listMessages(input.conversationId) : [];
+    const priorQuestionCount = history.filter((message) => message.role === "user").length;
+    if (priorQuestionCount >= MAX_QUESTIONS_PER_SESSION) {
+      return NextResponse.json(
+        { detail: `This chat session has reached the ${MAX_QUESTIONS_PER_SESSION}-question limit. Please start a new session.` },
+        { status: 429 }
+      );
+    }
+
     const conversation = input.conversationId
       ? { id: input.conversationId }
       : await createConversation(input.question.slice(0, 80));
@@ -60,8 +74,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Follow-up turns lose their subject without history: rewrite into a standalone
+    // question for routing/retrieval/generation. The saved user message stays original.
+    let question = input.question;
+    if (history.length > 0) {
+      question = await rewriteFollowupQuestion(input.question, history, model);
+      if (question !== input.question) {
+        console.log(`Follow-up rewritten for retrieval: "${input.question}" -> "${question}"`);
+      }
+    }
+
     if (retrievalMode === "amg") {
-      const result = await answerWithDataset(input.question, datasetSlug, systemPrompt, model);
+      const result = await answerWithDataset(question, datasetSlug, systemPrompt, model);
       const saved = await addMessage({ conversationId: conversation.id, role: "assistant", content: result.answer, sources: result.sources });
       if (input.stream) {
         // AMG numbers are computed in TS, not streamed: emit the finished answer as one delta.
@@ -78,17 +102,17 @@ export async function POST(request: Request) {
     let routedSlugs = documentSlugs;
     const candidates = await listReadyDocuments({ tags, slugs: documentSlugs });
     if (candidates.length > 1) {
-      routedSlugs = await routeDocuments(input.question, candidates, model);
+      routedSlugs = await routeDocuments(question, candidates, model);
     } else if (candidates.length === 1) {
       routedSlugs = [candidates[0].slug];
     }
 
     // Stage 2: lexical PageIndex retrieval inside the routed documents.
-    const retrieved = await retrievePageIndexNodes({ query: input.question, tags, documentSlugs: routedSlugs, topK });
+    const retrieved = await retrievePageIndexNodes({ query: question, tags, documentSlugs: routedSlugs, topK });
     const sources = retrieved.map(toSourceReference);
 
     if (!input.stream) {
-      const answer = await generateGroundedAnswer(input.question, retrieved, systemPrompt, model);
+      const answer = await generateGroundedAnswer(question, retrieved, systemPrompt, model);
       const saved = await addMessage({ conversationId: conversation.id, role: "assistant", content: answer, sources });
       return NextResponse.json({ conversationId: conversation.id, answer, sources, messageId: saved.id });
     }
@@ -101,7 +125,7 @@ export async function POST(request: Request) {
         try {
           send({ type: "meta", conversationId, sources });
           let fullAnswer = "";
-          for await (const delta of generateGroundedAnswerStream(input.question, retrieved, systemPrompt, model)) {
+          for await (const delta of generateGroundedAnswerStream(question, retrieved, systemPrompt, model)) {
             fullAnswer += delta;
             send({ type: "delta", text: delta });
           }

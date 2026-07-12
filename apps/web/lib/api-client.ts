@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatResponse, ChatSession, ChatStreamEvent, Helpdesk, HelpdeskDocument, ImportSuggestion, MessageFeedback, ModelsInfo, PredictionModelInfo, PredictionResult, RetrievalMode, RetrievalResponseItem } from "@helpdesk/shared";
+import type { ChatMessage, ChatResponse, ChatSession, ChatStreamEvent, Helpdesk, HelpdeskDocument, ImportSuggestion, MessageFeedback, ModelsInfo, PredictionModelInfo, PredictionResult, RetrievalDebugResponse, RetrievalMode, RetrievalResponseItem } from "@helpdesk/shared";
 
 export class ApiError extends Error {
   constructor(
@@ -31,6 +31,7 @@ export function getErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 422) return "Please check the input and try again.";
     if (error.status === 404) return "The requested item was not found.";
+    if (error.status === 429) return "This chat session has reached its question limit. Please start a new session.";
     return "The server could not complete the request.";
   }
   if (error instanceof TypeError) return "Cannot connect to the API server.";
@@ -109,6 +110,11 @@ export const apiClient = {
     }),
   retrieve: (body: { query: string; tags?: string[]; topK?: number }) =>
     request<{ data: RetrievalResponseItem[] }>("/api/chat/retrieve", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+  debugRetrieval: (body: { question: string; helpdeskSlug?: string; tags?: string[]; topK?: number; top?: number; noRoute?: boolean; model?: string }) =>
+    request<{ data: RetrievalDebugResponse }>("/api/chat/debug", {
       method: "POST",
       body: JSON.stringify(body)
     }),

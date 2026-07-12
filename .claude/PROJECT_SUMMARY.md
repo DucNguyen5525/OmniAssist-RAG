@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-12 +07:00  
-**Session:** #19 - 2-stage doc routing, streaming answers, 👍👎 feedback, vitest unit tests
+**Last Updated:** 2026-07-13 +07:00
+**Session:** #23 - Admin retrieval debug UI
 
 ---
 
@@ -37,7 +37,8 @@ scripts/generate-node-summaries.ts Gemini Vietnamese summaries per node (batched
 scripts/process-doc-images.ts     Enhance (normalize+sharpen) images → WebP into apps/web/public/doc-images + rewrite JSON refs
 apps/web/public/doc-images/       Published WebP images per document slug (served statically)
 .data/Docs/                       Source documents (Tech Support Manual in md/pdf/txt/html; same content)
-docs/                             Research notes + tabular-QA plan (research-amg-tabular-qa.md, plan-tabular-qa-v1.md)
+docs/                             Research notes + tabular-QA plan + RAG debugging guide (rag-debugging.md)
+scripts/debug-retrieval.ts        Retrieval inspector CLI: routing decision + per-node scores + final prompt
 apps/web/components/chat/         Chatbot UI components (Sidebar, InputBar, MessageItem, Header, EmptyState)
 apps/web/app/admin/documents/     PageIndex JSON import and document list UI
 apps/web/app/admin/debug/         Vectorless retrieval debug UI
@@ -134,6 +135,9 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Streaming chat answers | Completed | `gemini.ts` (createChatCompletionStream + generateGroundedAnswerStream), `/api/chat` (stream flag → NDJSON), `api-client.ts` (askStream), chat page | GCLI SSE deltas piped as NDJSON events (`meta` with sources → `delta`s → `done` with messageId; `error` on failure). Assistant message saved to Mongo after the stream completes. AMG mode replies as one delta (numbers computed in TS). Frontend renders deltas incrementally. |
 | 👍👎 answer feedback | Completed | shared `MessageFeedback`, `repository.ts` (setMessageFeedback), `PATCH /api/chat/messages/[id]`, `ChatMessageItem.tsx`, chat page | Hover thumbs on assistant messages; toggle persists `feedback: up/down/null` on the message record (optimistic UI). Loaded back with session history. |
 | Vitest unit tests | Completed | `apps/web/lib/server/__tests__/*` (14 tests), `scoreCandidates` export in `retrieval.ts` | `npm run test` → flattenPageIndexTree (tree/paths/dedup/fallbacks), retrieval scoring (IDF ranking, phrase bonus, stuffing cap, zero-score) + extractImageUrls, import-analyzer normalizeSuggestion. Tests exposed & fixed a bug: level≤1 bonus no longer lets non-matching nodes pass the score>0 filter. |
+| Follow-up question rewriting | Completed | `question-rewriter.ts`, `/api/chat` | Câu follow-up trong hội thoại ("còn máy P8 thì sao?") được LLM viết lại thành câu hỏi độc lập (dựa trên ≤6 message gần nhất) trước khi routing/retrieval/generation; message lưu Mongo vẫn là nguyên văn người dùng. Fallback về câu gốc khi LLM lỗi/trả về quá dài. Server log dòng `Follow-up rewritten for retrieval:` khi có viết lại. E2E verified: "con may P8 thi bi loi nay xu ly the nao?" → "May P8 khong ket noi duoc wifi thi xu ly the nao?". |
+| Chat session question cap | Completed | `/api/chat`, `api-client.ts` | Existing sessions accept up to 6 user questions. The 7th question returns HTTP 429 before storing the user message or calling rewrite/retrieval/LLM; frontend maps 429 to a start-new-session message. |
+| RAG debugging guide + inspector CLI/Admin UI | Completed | `docs/rag-debugging.md`, `scripts/debug-retrieval.ts`, `/api/chat/debug`, `/admin/debug`, `buildGroundedPrompt` export in `gemini.ts` | Decision tree tùy biến cho pipeline vectorless (route→retrieve→prompt→generate). CLI: `npm run debug:retrieval '--' --helpdesk <slug> "câu hỏi"` prints candidates, routing decision, scored nodes (selected = lọt topK), prompt with `--show-prompt`/`--no-route`/`--top N`; PS 5.1 phải quote `'--'`. Admin `/admin/debug` now selects helpdesk, runs the same scoped routing/scoring flow, and shows candidate docs, routing status, scored node table, node details, and final prompt. |
 | Tabular-QA retrieval mode (`amg`) | Completed | `tabular-qa.ts`, `/api/chat`, `import-dataset.ts`, dashboard/settings UI | LLM plans query → code computes count/proportion (categorical equals OR numeric threshold via compare/value)/mean/median/min/max/groupBy/correlation over `dataset_rows`; numbers computed in TS (not LLM). Per-helpdesk `retrievalMode` + `datasetSlug`. Ingest of dengue CSV/XLS is user-run. |
 | Shock-risk prediction | Completed | `prediction.ts`, `scripts/train-shock-model.ts`, `/api/predict`, `/predict/[modelSlug]`, repository `prediction_models` | TS logistic regression on paper1 `dengue-baseline` enrolment features (no leakage); 5-fold CV AUROC 0.787; artifact stored in Mongo; `/api/predict` GET model info + POST case→probability + top contributions; `/predict/shock-baseline` case-input form (public route). Research tool only, not clinical. Train via `npm run train:shock`. |
 | GCLI Key Rotation LLM layer | Completed | `gemini.ts`, `env.ts`, `/api/chat` | Replaces raw Gemini SDK with SWRR/Weighted Random key rotation, failover, model mapping. |
@@ -241,6 +245,7 @@ npm run typecheck
 npm run test
 npm run build
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
+npm run debug:retrieval '--' --helpdesk tech-support "câu hỏi cần debug"   # PS 5.1: phải quote '--'
 ```
 
 Python worker commands must be run only inside the approved Conda environment for this workspace.

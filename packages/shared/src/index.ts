@@ -101,6 +101,49 @@ export interface RetrievalResponseItem extends SourceReference {
   summary?: string;
 }
 
+export interface RetrievalDebugCandidateDocument {
+  slug: string;
+  title: string;
+  hasSummary: boolean;
+  routed: boolean;
+}
+
+export interface RetrievalDebugNode {
+  rank: number;
+  selected: boolean;
+  score: number;
+  documentSlug: string;
+  documentTitle: string;
+  nodeId: string;
+  nodeTitle: string;
+  path: string[];
+  level: number;
+  pageStart?: number;
+  pageEnd?: number;
+  sourceRef?: string;
+  summary?: string;
+  content: string;
+}
+
+export interface RetrievalDebugResponse {
+  question: string;
+  scope: {
+    helpdeskSlug?: string;
+    topK: number;
+    tags: string[];
+    documentSlugs: string[];
+  };
+  routing: {
+    status: "no_candidates" | "skipped_no_route" | "skipped_single_candidate" | "routed";
+    routedSlugs: string[];
+  };
+  candidates: RetrievalDebugCandidateDocument[];
+  nodes: RetrievalDebugNode[];
+  selectedCount: number;
+  totalScoredNodes: number;
+  prompt: string;
+}
+
 export interface Helpdesk {
   id: string;
   name: string;
