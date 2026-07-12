@@ -1,9 +1,1 @@
-﻿● Câu 1: UI chat có hiển thị debug này không? — Không. Kết quả của debug:retrieval chỉ có ở CLI. Trên web hiện có 2 mức nhỏ hơn:
-
-  - UI chat chỉ hiện "Nguồn tham khảo" — các node đã lọt vào prompt, không có điểm số của node suýt lọt, không có quyết định routing, không có prompt cuối.
-  - Trang /admin/debug (có sẵn từ trước) cho nhập query và xem node retrieval trả về, nhưng nó gọi /api/retrieve với settings toàn cục (topK/tags trong local storage) — không theo helpdesk, không có tầng routing, không có node bị loại. Tức là nó chỉ cover 1/4 cây quyết định.
-
-  Nếu muốn, có thể nâng cấp /admin/debug lên ngang với CLI (chọn helpdesk, hiện routing decision + bảng điểm đầy đủ + prompt) — phần backend đã có sẵn hàm, chỉ cần thêm một API route debug và sửa trang đó. Phần debug này chỉ nhìn thấy được nếu đã đăng nhập tài khoản admin.
-
-  2. Query expansion bằng LLM — điểm yếu đã ghi nhận trong PROJECT_SUMMARY: câu hỏi tiếng Việt diễn đạt khác hoàn toàn từ ngữ trong tài liệu thì lexical scoring chịu thua (không tự hiểu đồng nghĩa). Trước khi chấm điểm, cho LLM sinh 3-5 biến thể từ khóa (VN + EN kỹ thuật) và lấy max điểm qua các biến thể.
--> theo bạn thì yêu cầu này có đáng thực hiện không?
+﻿

@@ -1,7 +1,7 @@
 # Project Summary
 
 **Last Updated:** 2026-07-13 +07:00
-**Session:** #26 - Favicon and protected admin tabs
+**Session:** #27 - Fix monorepo env loading for Next.js app
 
 ---
 
@@ -159,7 +159,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 
 - [x] Run `npm install` to update dependencies.
 - [ ] Refresh or regenerate `package-lock.json` if needed.
-- [ ] Verify MongoDB Atlas and R2 credentials in a real environment.
+- [x] Verify MongoDB Atlas and R2 credentials in a real environment. (MongoDB connection verified, R2 pending check)
 - [ ] Add authentication/admin gate before public deployment.
 
 ### Medium Priority

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatSession } from "@helpdesk/shared";
-import { Plus, Search, MessageSquare, Bug, Settings, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, Search, MessageSquare, Bug, Settings, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +15,7 @@ interface ChatSidebarProps {
   onNewChat: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  isMobileDrawer?: boolean;
 }
 
 export function ChatSidebar({
@@ -24,7 +25,8 @@ export function ChatSidebar({
   onDeleteSession,
   onNewChat,
   collapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  isMobileDrawer = false
 }: ChatSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const pathname = usePathname();
@@ -51,9 +53,9 @@ export function ChatSidebar({
         <button
           onClick={onToggleCollapse}
           className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-stone-800 text-stone-400 hover:text-white"
-          title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          title={isMobileDrawer ? "Đóng sidebar" : collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {isMobileDrawer ? <X size={18} /> : collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 

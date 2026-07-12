@@ -35,6 +35,7 @@ export default function HelpdeskChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [models, setModels] = useState<string[]>([]);
@@ -102,8 +103,12 @@ export default function HelpdeskChatPage() {
 
   // Handle selecting a past session
   async function handleSelectSession(sessionId: string) {
-    if (sessionId === activeSessionId) return;
+    if (sessionId === activeSessionId) {
+      setIsMobileSidebarOpen(false);
+      return;
+    }
     setActiveSessionId(sessionId);
+    setIsMobileSidebarOpen(false);
     setError(undefined);
     setIsLoading(true);
     try {
@@ -127,6 +132,7 @@ export default function HelpdeskChatPage() {
   // Handle starting a new chat
   function handleNewChat() {
     setActiveSessionId(undefined);
+    setIsMobileSidebarOpen(false);
     setMessages([]);
     setQuestion("");
     setError(undefined);
@@ -246,7 +252,7 @@ export default function HelpdeskChatPage() {
   // Loading state for helpdesk
   if (isLoadingHelpdesk) {
     return (
-      <div className="flex h-screen items-center justify-center bg-stone-50">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-stone-50">
         <div className="flex items-center gap-3 text-stone-400">
           <div className="h-2 w-2 animate-ping rounded-full bg-mint" />
           <span className="text-sm">Đang tải helpdesk...</span>
@@ -258,7 +264,7 @@ export default function HelpdeskChatPage() {
   // Error / Not found state
   if (helpdeskError || !helpdesk) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-stone-50 p-6 text-center">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-stone-50 p-6 text-center">
         <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
           <p className="font-semibold mb-1">Không tìm thấy helpdesk</p>
           <p>{helpdeskError || `Helpdesk "${helpdeskSlug}" không tồn tại.`}</p>
@@ -275,24 +281,40 @@ export default function HelpdeskChatPage() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-stone-50">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-stone-50">
       {/* Sidebar (Chatbot UI style) */}
-      <ChatSidebar
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelectSession={handleSelectSession}
-        onDeleteSession={handleRequestDelete}
-        onNewChat={handleNewChat}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
-      >
-        {/* Dashboard link in sidebar footer — passed as children */}
-      </ChatSidebar>
+      {isMobileSidebarOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-stone-900/40 md:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-label="Đóng thanh bên"
+        />
+      ) : null}
+      <div className={`fixed inset-y-0 left-0 z-40 md:static md:z-auto md:flex ${isMobileSidebarOpen ? "flex" : "hidden md:flex"}`}>
+        <ChatSidebar
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelectSession={handleSelectSession}
+          onDeleteSession={handleRequestDelete}
+          onNewChat={handleNewChat}
+          collapsed={isMobileSidebarOpen ? false : sidebarCollapsed}
+          onToggleCollapse={() => {
+            if (isMobileSidebarOpen) {
+              setIsMobileSidebarOpen(false);
+              return;
+            }
+            setSidebarCollapsed((prev) => !prev);
+          }}
+          isMobileDrawer={isMobileSidebarOpen}
+        />
+      </div>
 
       {/* Main Workspace */}
       <main className="flex flex-1 flex-col overflow-hidden bg-white">
         <ChatHeader
           title={activeSession?.title || helpdesk.name}
+          onOpenSidebar={() => setIsMobileSidebarOpen(true)}
           onClearChat={messages.length > 0 ? () => handleRequestDelete(activeSessionId) : undefined}
           hasMessages={messages.length > 0}
         />
