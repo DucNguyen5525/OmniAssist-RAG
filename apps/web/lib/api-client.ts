@@ -140,7 +140,7 @@ export const apiClient = {
   // Helpdesks
   listHelpdesks: () =>
     request<{ data: Helpdesk[] }>("/api/helpdesks"),
-  createHelpdesk: (body: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }) =>
+  createHelpdesk: (body: { name: string; slug: string; description?: string; isPrivate?: boolean; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }) =>
     request<{ data: Helpdesk }>("/api/helpdesks", { method: "POST", body: JSON.stringify(body) }),
   getHelpdesk: (slug: string) =>
     request<{ data: Helpdesk }>(`/api/helpdesks/${slug}`),

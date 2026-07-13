@@ -149,6 +149,7 @@ export interface Helpdesk {
   name: string;
   slug: string;
   description?: string;
+  isPrivate: boolean;
   tags: string[];
   topK: number;
   systemPrompt?: string;

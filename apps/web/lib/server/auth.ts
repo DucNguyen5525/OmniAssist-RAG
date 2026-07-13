@@ -48,3 +48,25 @@ export function validateSessionCookie(cookieValue: string): boolean {
 
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
+
+export function isRequestAuthenticated(request: Request): boolean {
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const cookies = Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .filter(Boolean)
+      .map((cookie) => {
+        const [key, ...rest] = cookie.trim().split("=");
+        return [key, rest.join("=")];
+      })
+  );
+
+  const session = cookies[SESSION_COOKIE_NAME];
+  if (!session) return false;
+
+  try {
+    return validateSessionCookie(session);
+  } catch {
+    return false;
+  }
+}

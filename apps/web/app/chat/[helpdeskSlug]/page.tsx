@@ -3,14 +3,14 @@
 import type { ChatSession, Helpdesk, MessageFeedback, SourceReference } from "@helpdesk/shared";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatInputBar } from "@/components/chat/ChatInputBar";
 import { ChatMessageItem } from "@/components/chat/ChatMessageItem";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
-import { apiClient, getErrorMessage } from "@/lib/api-client";
+import { ApiError, apiClient, getErrorMessage } from "@/lib/api-client";
 import { loadSettings, parseTags, saveSettings } from "@/lib/settings";
 
 interface UiMessage {
@@ -24,6 +24,7 @@ interface UiMessage {
 
 export default function HelpdeskChatPage() {
   const params = useParams();
+  const router = useRouter();
   const helpdeskSlug = params.helpdeskSlug as string;
 
   const [helpdesk, setHelpdesk] = useState<Helpdesk | null>(null);
@@ -74,13 +75,17 @@ export default function HelpdeskChatPage() {
         const res = await apiClient.getHelpdesk(helpdeskSlug);
         setHelpdesk(res.data);
       } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          router.push(`/login?next=${encodeURIComponent(`/chat/${helpdeskSlug}`)}`);
+          return;
+        }
         setHelpdeskError(getErrorMessage(err));
       } finally {
         setIsLoadingHelpdesk(false);
       }
     }
     loadHelpdesk();
-  }, [helpdeskSlug]);
+  }, [helpdeskSlug, router]);
 
   // Fetch session history list
   async function fetchSessions() {
@@ -226,6 +231,10 @@ export default function HelpdeskChatPage() {
         await fetchSessions();
       }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push(`/login?next=${encodeURIComponent(`/chat/${helpdeskSlug}`)}`);
+        return;
+      }
       setMessages((current) => {
         const last = current[current.length - 1];
         if (!last || last.role !== "assistant" || !last.isStreaming) return current;

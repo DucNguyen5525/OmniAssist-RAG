@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isRequestAuthenticated } from "@/lib/server/auth";
 import { deleteHelpdesk, getHelpdeskBySlug, updateHelpdesk } from "@/lib/server/repository";
 
 export const runtime = "nodejs";
@@ -7,6 +8,7 @@ export const runtime = "nodejs";
 const updateHelpdeskSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  isPrivate: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   topK: z.number().int().min(1).max(12).optional(),
   systemPrompt: z.string().optional(),
@@ -16,12 +18,15 @@ const updateHelpdeskSchema = z.object({
   documentSlugs: z.array(z.string()).optional()
 });
 
-export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const helpdesk = await getHelpdeskBySlug(slug);
     if (!helpdesk) {
       return NextResponse.json({ detail: "Helpdesk not found" }, { status: 404 });
+    }
+    if (helpdesk.isPrivate && !isRequestAuthenticated(request)) {
+      return NextResponse.json({ detail: "Login required for this helpdesk" }, { status: 401 });
     }
     return NextResponse.json({ data: helpdesk });
   } catch (error) {

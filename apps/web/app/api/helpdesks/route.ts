@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isRequestAuthenticated } from "@/lib/server/auth";
 import { createHelpdesk, listHelpdesks } from "@/lib/server/repository";
 
 export const runtime = "nodejs";
@@ -8,6 +9,7 @@ const createHelpdeskSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   description: z.string().optional(),
+  isPrivate: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   topK: z.number().int().min(1).max(12).optional(),
   systemPrompt: z.string().optional(),
@@ -17,10 +19,11 @@ const createHelpdeskSchema = z.object({
   documentSlugs: z.array(z.string()).optional()
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const helpdesks = await listHelpdesks();
-    return NextResponse.json({ data: helpdesks });
+    const authenticated = isRequestAuthenticated(request);
+    return NextResponse.json({ data: authenticated ? helpdesks : helpdesks.filter((helpdesk) => !helpdesk.isPrivate) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ detail: message }, { status: 500 });

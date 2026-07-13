@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-13 +07:00
-**Session:** #27 - Fix monorepo env loading for Next.js app
+**Last Updated:** 2026-07-13 09:02:57 +07:00
+**Session:** #28 - Private helpdesk access control
 
 ---
 
@@ -115,7 +115,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | --- | --- | --- | --- |
 | Next.js runtime consolidation | Completed | `package.json`, `apps/web/app/api/*` | Main API deploys with Vercel. |
 | Authentication System | Completed | `apps/web/middleware.ts`, `auth.ts`, `/login` | Cookie-based auth for `LittleKai` / `Duc365bmt`; unauthenticated users are redirected from `/dashboard`, `/settings`, `/admin/debug`, `/admin/documents`, and protected admin/debug/document APIs return 401. |
-| Multi-Helpdesk System | Completed | `/dashboard`, `/chat/[helpdeskSlug]`, `/api/helpdesks` | Isolated helpdesks with custom tags, topK, systemPrompt; dashboard supports create/edit/delete with confirmation. |
+| Multi-Helpdesk System | Completed | `/dashboard`, `/chat/[helpdeskSlug]`, `/api/helpdesks` | Isolated helpdesks with custom tags, topK, systemPrompt; dashboard supports create/edit/delete with confirmation. Helpdesks can be marked private; private helpdesk metadata/chat access requires a valid login session. |
 | Chatbot UI Upgrade (McKay Wrigley) | Completed | `apps/web/app/chat/[helpdeskSlug]/page.tsx`, `components/chat/*`, `BrandIcon.tsx` | Session history sidebar, markdown formatting, collapsed PageIndex citations drawer, shared Headset brand icon. Prompt starters removed from empty chat state; chat sidebar hides the Documents shortcut. |
 | PageIndex Ingestion Skill Update | Completed | `.claude/skills/pageindex-ingestion.md` | Step 0 added for helpdesk selection prompt before upload. |
 | Dify removal | Completed | Full repo scan | No Dify code/env/routes found in current source. |

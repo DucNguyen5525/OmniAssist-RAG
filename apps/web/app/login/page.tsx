@@ -27,7 +27,8 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/dashboard");
+        const nextPath = new URLSearchParams(window.location.search).get("next");
+        router.push(nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard");
       } else {
         const body = await res.json().catch(() => null);
         setError(body?.error || "Tên đăng nhập hoặc mật khẩu không đúng.");

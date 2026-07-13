@@ -10,6 +10,7 @@ import {
   Hash,
   Layers,
   Trash2,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ interface HelpdeskFormData {
   name: string;
   slug: string;
   description: string;
+  isPrivate: boolean;
   tags: string;
   topK: number;
   systemPrompt: string;
@@ -44,6 +46,7 @@ const defaultForm: HelpdeskFormData = {
   name: "",
   slug: "",
   description: "",
+  isPrivate: false,
   tags: "",
   topK: 6,
   systemPrompt: "",
@@ -82,6 +85,7 @@ export default function DashboardPage() {
       name: hd.name,
       slug: hd.slug,
       description: hd.description ?? "",
+      isPrivate: hd.isPrivate ?? false,
       tags: (hd.tags ?? []).join(", "),
       topK: hd.topK ?? 6,
       systemPrompt: hd.systemPrompt ?? "",
@@ -185,6 +189,7 @@ export default function DashboardPage() {
         await apiClient.updateHelpdesk(editingSlug, {
           name: form.name.trim(),
           description: form.description.trim() || undefined,
+          isPrivate: form.isPrivate,
           tags,
           topK: form.topK,
           systemPrompt: form.systemPrompt.trim() || undefined,
@@ -197,6 +202,7 @@ export default function DashboardPage() {
           name: form.name.trim(),
           slug: form.slug.trim(),
           description: form.description.trim() || undefined,
+          isPrivate: form.isPrivate,
           tags: tags.length > 0 ? tags : undefined,
           topK: form.topK,
           systemPrompt: form.systemPrompt.trim() || undefined,
@@ -340,6 +346,12 @@ export default function DashboardPage() {
                   <p className="mt-0.5 text-xs text-stone-400 font-mono">
                     /{hd.slug}
                   </p>
+                  {hd.isPrivate ? (
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-stone-900 px-2 py-0.5 text-[11px] font-medium text-white">
+                      <Lock size={10} />
+                      Private
+                    </span>
+                  ) : null}
                 </div>
 
                 {/* Description */}
@@ -481,6 +493,23 @@ export default function DashboardPage() {
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 outline-none transition-colors focus:border-mint focus:ring-2 focus:ring-mint/20"
                 />
               </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-stone-200 bg-stone-50/70 p-3">
+                <input
+                  type="checkbox"
+                  checked={form.isPrivate}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, isPrivate: e.target.checked }))
+                  }
+                  className="mt-0.5 h-4 w-4 accent-mint"
+                />
+                <span>
+                  <span className="block text-xs font-medium text-stone-800">Private helpdesk</span>
+                  <span className="mt-0.5 block text-[11px] leading-5 text-stone-500">
+                    Bật tuỳ chọn này để yêu cầu đăng nhập trước khi xem hoặc chat với helpdesk.
+                  </span>
+                </span>
+              </label>
 
               {/* Tags */}
               <div>

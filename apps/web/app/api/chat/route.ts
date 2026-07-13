@@ -3,6 +3,7 @@ import type { ChatStreamEvent, RetrievalMode, SourceReference } from "@helpdesk/
 import { z } from "zod";
 import { routeDocuments } from "@/lib/server/doc-router";
 import { generateGroundedAnswer, generateGroundedAnswerStream } from "@/lib/server/gemini";
+import { isRequestAuthenticated } from "@/lib/server/auth";
 import { rewriteFollowupQuestion } from "@/lib/server/question-rewriter";
 import {
   addMessage,
@@ -34,6 +35,11 @@ const chatSchema = z.object({
 export async function POST(request: Request) {
   try {
     const input = chatSchema.parse(await request.json());
+    const helpdesk = input.helpdeskSlug ? await getHelpdeskBySlug(input.helpdeskSlug) : null;
+    if (helpdesk?.isPrivate && !isRequestAuthenticated(request)) {
+      return NextResponse.json({ detail: "Login required for this helpdesk" }, { status: 401 });
+    }
+
     // History fetched before saving the new user message, so it holds prior turns only.
     const history = input.conversationId ? await listMessages(input.conversationId) : [];
     const priorQuestionCount = history.filter((message) => message.role === "user").length;
@@ -58,20 +64,17 @@ export async function POST(request: Request) {
     let model = input.model;
     let documentSlugs: string[] | undefined;
 
-    if (input.helpdeskSlug) {
-      const helpdesk = await getHelpdeskBySlug(input.helpdeskSlug);
-      if (helpdesk) {
-        const helpdeskTags = helpdesk.tags ?? [];
-        const explicitTags = input.tags ?? [];
-        const mergedTags = [...new Set([...helpdeskTags, ...explicitTags])];
-        tags = mergedTags.length > 0 ? mergedTags : undefined;
-        topK = input.topK ?? helpdesk.topK;
-        systemPrompt = helpdesk.systemPrompt;
-        retrievalMode = input.retrievalMode ?? helpdesk.retrievalMode ?? "pageindex";
-        datasetSlug = helpdesk.datasetSlug ?? input.helpdeskSlug;
-        model = input.model ?? helpdesk.model;
-        documentSlugs = helpdesk.documentSlugs?.length ? helpdesk.documentSlugs : undefined;
-      }
+    if (input.helpdeskSlug && helpdesk) {
+      const helpdeskTags = helpdesk.tags ?? [];
+      const explicitTags = input.tags ?? [];
+      const mergedTags = [...new Set([...helpdeskTags, ...explicitTags])];
+      tags = mergedTags.length > 0 ? mergedTags : undefined;
+      topK = input.topK ?? helpdesk.topK;
+      systemPrompt = helpdesk.systemPrompt;
+      retrievalMode = input.retrievalMode ?? helpdesk.retrievalMode ?? "pageindex";
+      datasetSlug = helpdesk.datasetSlug ?? input.helpdeskSlug;
+      model = input.model ?? helpdesk.model;
+      documentSlugs = helpdesk.documentSlugs?.length ? helpdesk.documentSlugs : undefined;
     }
 
     // Follow-up turns lose their subject without history: rewrite into a standalone

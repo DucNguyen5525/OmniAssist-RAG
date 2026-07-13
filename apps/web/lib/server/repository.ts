@@ -71,6 +71,7 @@ export interface HelpdeskRecord extends MongoDocument {
   name: string;
   slug: string;
   description?: string;
+  isPrivate?: boolean;
   tags: string[];
   topK: number;
   systemPrompt?: string;
@@ -170,6 +171,7 @@ export function serializeHelpdesk(record: HelpdeskRecord): Helpdesk {
     name: record.name,
     slug: record.slug,
     description: record.description,
+    isPrivate: record.isPrivate ?? false,
     tags: record.tags ?? [],
     topK: record.topK ?? 6,
     systemPrompt: record.systemPrompt,
@@ -376,7 +378,7 @@ export async function getHelpdeskBySlug(slug: string): Promise<Helpdesk | null> 
   return record ? serializeHelpdesk(record) : null;
 }
 
-export async function createHelpdesk(input: { name: string; slug: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }): Promise<Helpdesk> {
+export async function createHelpdesk(input: { name: string; slug: string; description?: string; isPrivate?: boolean; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }): Promise<Helpdesk> {
   await ensureMongoIndexes();
   const db = await getDb();
   const now = new Date();
@@ -387,6 +389,7 @@ export async function createHelpdesk(input: { name: string; slug: string; descri
     name: input.name,
     slug: input.slug,
     description: input.description,
+    isPrivate: input.isPrivate ?? false,
     tags: input.tags ?? [],
     topK: input.topK ?? 6,
     systemPrompt: input.systemPrompt,
@@ -402,7 +405,7 @@ export async function createHelpdesk(input: { name: string; slug: string; descri
   return serializeHelpdesk(saved);
 }
 
-export async function updateHelpdesk(slug: string, input: { name?: string; description?: string; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }): Promise<Helpdesk | null> {
+export async function updateHelpdesk(slug: string, input: { name?: string; description?: string; isPrivate?: boolean; tags?: string[]; topK?: number; systemPrompt?: string; model?: string; retrievalMode?: RetrievalMode; datasetSlug?: string; documentSlugs?: string[] }): Promise<Helpdesk | null> {
   const db = await getDb();
   const now = new Date();
   const result = await db.collection<HelpdeskRecord>("helpdesks").findOneAndUpdate(
