@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-18 +07:00
-**Session:** #31 - Pin conversations (admin only) + date filter in chat history sidebar
+**Last Updated:** 2026-07-19 +07:00
+**Session:** #32 - Document detail page: view/edit/add/delete PageIndex nodes, edit doc metadata, export JSON, regenerate doc summary
 
 ---
 
@@ -56,7 +56,9 @@ workers/pageindex-ingest/         Optional Python worker/tooling for PageIndex p
 | `.env.example` | MongoDB/R2/GCLI/Auth env template | AUTH_USERNAME, AUTH_PASSWORD, AUTH_SECRET. |
 | `apps/web/middleware.ts` | Next.js Edge Auth Middleware | Protects all routes except `/login` and `/api/auth/*`. |
 | `apps/web/lib/server/auth.ts` | Server Auth module | Signed HMAC-SHA256 session cookie validation with admin/child role payloads. |
-| `apps/web/lib/server/repository.ts` | MongoDB repository | Documents, nodes, conversations, messages, helpdesks. |
+| `apps/web/lib/server/repository.ts` | MongoDB repository | Documents, nodes (incl. node CRUD for the editor), conversations, messages, helpdesks. |
+| `apps/web/lib/server/pageindex-export.ts` | PageIndex tree export | Rebuilds nested `{title, nodes[]}` JSON from flattened node records (round-trips through flatten). |
+| `apps/web/app/admin/documents/[slug]/page.tsx` | Document node editor UI | Tree + search, node edit/add/delete, doc metadata, Export JSON, Regenerate summary. |
 | `apps/web/app/login/page.tsx` | Login UI | Authenticates `LittleKai` / `Duc365bmt`. |
 | `apps/web/app/dashboard/page.tsx` | Dashboard UI | List, create, and manage isolated helpdesks. |
 | `apps/web/app/chat/[helpdeskSlug]/page.tsx` | Scoped Chatbot UI | Helpdesk-specific chat with custom tags, topK, and systemPrompt. |
@@ -103,6 +105,11 @@ Frontend calls same-origin Next API routes through `apps/web/lib/api-client.ts`.
 /api/chat/sessions/[id]         DELETE: remove conversation + its messages
 /api/chat/messages/[id]         PATCH: set 👍👎 feedback on an assistant message
 /api/documents/analyze          POST: AI suggests import action (new/update, slug, tags)
+/api/documents/[slug]           GET: document detail; PATCH: edit title/tags/version (admin)
+/api/documents/[slug]/nodes     GET: document + all PageIndex nodes; POST: add node (admin)
+/api/documents/[slug]/nodes/[nodeId]  PATCH: edit title/summary/content; DELETE: leaf node only (admin)
+/api/documents/[slug]/export    GET: rebuild + download PageIndex JSON tree (admin)
+/api/documents/[slug]/regenerate-summary  POST: re-run docSummary generation (admin)
 /api/models                     Available AI models list (GCLI_MODELS + default)
 ```
 
@@ -145,6 +152,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Shock-risk prediction | Completed | `prediction.ts`, `scripts/train-shock-model.ts`, `/api/predict`, `/predict/[modelSlug]`, repository `prediction_models` | TS logistic regression on paper1 `dengue-baseline` enrolment features (no leakage); 5-fold CV AUROC 0.787; artifact stored in Mongo; `/api/predict` GET model info + POST case→probability + top contributions; `/predict/shock-baseline` case-input form (public route). Research tool only, not clinical. Train via `npm run train:shock`. |
 | GCLI Key Rotation LLM layer | Completed | `gemini.ts`, `env.ts`, `/api/chat` | Replaces raw Gemini SDK with SWRR/Weighted Random key rotation, failover, model mapping. |
 | PageIndex import API/UI | Completed | `/api/documents/import`, admin documents page | Imports existing PageIndex JSON. |
+| Document node editor | Completed | `/admin/documents/[slug]` page, `/api/documents/[slug]*` routes, repository node CRUD, `pageindex-export.ts` | Tree view + search of PageIndex nodes; edit node title/summary/content (title rename cascades into own+descendant `path`); add child/root node (nodeId auto-slugged from path, parent childrenIds updated); delete leaf nodes only; edit doc title/tags/version; Export JSON rebuilds the nested tree (round-trips through flatten) — needed because re-import deletes all nodes, so manual edits must be exported to keep a source of truth; Regenerate summary button re-runs `generateDocSummary`. All routes admin-only. |
 | Local TS import script | Completed | `scripts/import-pageindex.ts` | `npm run import:pageindex -- --file ...`. |
 | MD base64 image extraction | Completed | `scripts/extract-md-images.ts` | Ran on `.data/Docs/Tech Support Manual.md`: 561 images extracted, cleaned MD 41MB → 281KB in `Tech Support Manual-extracted/`. On PowerShell call `npx tsx scripts/extract-md-images.ts --file ...` (npm swallows `--`). |
 | MD → PageIndex JSON converter | Completed | `scripts/md-to-pageindex.ts` | Heading tree → node tree; tables with >15 data rows split into child chunk nodes (header repeated). Tech Support Manual: 155 nodes (24 table chunks). |
@@ -183,6 +191,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 ### Low Priority / Nice to Have
 
 - [ ] Add richer PageIndex schema normalization if real PageIndex JSON differs from supported shapes.
+- [ ] Node editor nice-to-haves: markdown preview, move/reorder nodes, delete non-leaf subtrees. Remember: re-import replaces all nodes, so export edited JSON first (Export JSON button on `/admin/documents/[slug]`).
 - [x] Add streaming Gemini responses (NDJSON stream via /api/chat).
 - [x] Add feedback UI and API route (stored on the message record, not a separate collection).
 - [ ] Add tests for the chat route with mocked Gemini.

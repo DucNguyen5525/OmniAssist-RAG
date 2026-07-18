@@ -318,6 +318,155 @@ export async function upsertDocumentWithNodes(input: {
   return serializeDocument(saved);
 }
 
+export async function getDocumentBySlug(slug: string): Promise<DocumentRecord | null> {
+  await ensureMongoIndexes();
+  const db = await getDb();
+  return db.collection<DocumentRecord>("documents").findOne({ slug });
+}
+
+export async function updateDocumentMeta(
+  slug: string,
+  input: { title?: string; tags?: string[]; version?: string; docSummary?: string }
+): Promise<HelpdeskDocument | null> {
+  const db = await getDb();
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  if (input.title !== undefined) updates.title = input.title;
+  if (input.tags !== undefined) updates.tags = input.tags;
+  if (input.version !== undefined) updates.version = input.version;
+  if (input.docSummary !== undefined) updates.docSummary = input.docSummary;
+  const result = await db.collection<DocumentRecord>("documents").updateOne({ slug }, { $set: updates });
+  if (result.matchedCount === 0) return null;
+  const saved = await db.collection<DocumentRecord>("documents").findOne({ slug });
+  return saved ? serializeDocument(saved) : null;
+}
+
+export async function listDocumentNodeRecords(documentId: ObjectId): Promise<PageIndexNodeRecord[]> {
+  const db = await getDb();
+  // natural insertion order preserves the DFS pre-order from import
+  return db.collection<PageIndexNodeRecord>("pageindex_nodes").find({ documentId }).toArray();
+}
+
+export async function updateDocumentNode(
+  documentId: ObjectId,
+  nodeId: string,
+  input: { title?: string; summary?: string; content?: string }
+): Promise<PageIndexNode | null> {
+  const db = await getDb();
+  const collection = db.collection<PageIndexNodeRecord>("pageindex_nodes");
+  const node = await collection.findOne({ documentId, nodeId });
+  if (!node) return null;
+  const now = new Date();
+
+  // Renaming a section must also rename the matching path segment in the node itself and its descendants,
+  // because retrieval scoring matches against `path`.
+  if (input.title !== undefined && input.title !== node.title && node.path.length > 0) {
+    const depth = node.path.length - 1;
+    const prefixQuery: Record<string, unknown> = { documentId };
+    node.path.forEach((segment, index) => {
+      prefixQuery[`path.${index}`] = segment;
+    });
+    await collection.updateMany(prefixQuery, { $set: { [`path.${depth}`]: input.title, updatedAt: now } });
+  }
+
+  const updates: Record<string, unknown> = { updatedAt: now };
+  if (input.title !== undefined) updates.title = input.title;
+  if (input.summary !== undefined) updates.summary = input.summary;
+  if (input.content !== undefined) updates.content = input.content;
+  await collection.updateOne({ documentId, nodeId }, { $set: updates });
+  await touchDocument(documentId);
+  const saved = await collection.findOne({ documentId, nodeId });
+  return saved ? serializeNode(saved) : null;
+}
+
+export async function createDocumentNode(
+  documentId: ObjectId,
+  input: { parentNodeId?: string; title: string; summary?: string; content: string }
+): Promise<PageIndexNode> {
+  const db = await getDb();
+  const collection = db.collection<PageIndexNodeRecord>("pageindex_nodes");
+  const now = new Date();
+
+  let parent: PageIndexNodeRecord | null = null;
+  if (input.parentNodeId) {
+    parent = await collection.findOne({ documentId, nodeId: input.parentNodeId });
+    if (!parent) throw new Error(`Parent node not found: ${input.parentNodeId}`);
+  }
+
+  const path = [...(parent?.path ?? []), input.title];
+  const base = slugifyNodeId(path.join(" "));
+  const existing = await collection.find({ documentId }, { projection: { nodeId: 1 } }).toArray();
+  const usedIds = new Set(existing.map((record) => record.nodeId));
+  let nodeId = base;
+  let counter = 2;
+  while (usedIds.has(nodeId)) {
+    nodeId = `${base}-${counter}`;
+    counter += 1;
+  }
+
+  const record: PageIndexNodeRecord = {
+    _id: new ObjectId(),
+    documentId,
+    nodeId,
+    parentNodeId: parent?.nodeId,
+    title: input.title,
+    summary: input.summary,
+    content: input.content,
+    path,
+    level: parent ? parent.level + 1 : 1,
+    childrenIds: [],
+    createdAt: now,
+    updatedAt: now
+  };
+  await collection.insertOne(record);
+  if (parent) {
+    await collection.updateOne(
+      { documentId, nodeId: parent.nodeId },
+      { $set: { childrenIds: [...(parent.childrenIds ?? []), nodeId], updatedAt: now } }
+    );
+  }
+  await touchDocument(documentId);
+  return serializeNode(record);
+}
+
+export async function deleteDocumentNode(documentId: ObjectId, nodeId: string): Promise<"deleted" | "not_found" | "has_children"> {
+  const db = await getDb();
+  const collection = db.collection<PageIndexNodeRecord>("pageindex_nodes");
+  const node = await collection.findOne({ documentId, nodeId });
+  if (!node) return "not_found";
+  const childCount = await collection.countDocuments({ documentId, parentNodeId: nodeId });
+  if (childCount > 0 || (node.childrenIds ?? []).length > 0) return "has_children";
+  await collection.deleteOne({ _id: node._id });
+  if (node.parentNodeId) {
+    const parent = await collection.findOne({ documentId, nodeId: node.parentNodeId });
+    if (parent) {
+      await collection.updateOne(
+        { _id: parent._id },
+        { $set: { childrenIds: (parent.childrenIds ?? []).filter((childId) => childId !== nodeId), updatedAt: new Date() } }
+      );
+    }
+  }
+  await touchDocument(documentId);
+  return "deleted";
+}
+
+async function touchDocument(documentId: ObjectId) {
+  const db = await getDb();
+  await db.collection<DocumentRecord>("documents").updateOne({ _id: documentId }, { $set: { updatedAt: new Date() } });
+}
+
+// Same slug rules as scripts/md-to-pageindex.ts so hand-added nodes get consistent ids.
+function slugifyNodeId(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 120) || "node"
+  );
+}
+
 export async function createConversation(title: string, userId?: string) {
   await ensureMongoIndexes();
   const db = await getDb();

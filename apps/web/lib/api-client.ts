@@ -1,4 +1,4 @@
-import type { AuthInfo, ChatMessage, ChatResponse, ChatSession, ChatStreamEvent, Helpdesk, HelpdeskDocument, ImportSuggestion, MessageFeedback, ModelsInfo, PredictionModelInfo, PredictionResult, RetrievalDebugResponse, RetrievalMode, RetrievalResponseItem, UserAccount } from "@helpdesk/shared";
+import type { AuthInfo, ChatMessage, ChatResponse, ChatSession, ChatStreamEvent, Helpdesk, HelpdeskDocument, ImportSuggestion, MessageFeedback, ModelsInfo, PageIndexNode, PredictionModelInfo, PredictionResult, RetrievalDebugResponse, RetrievalMode, RetrievalResponseItem, UserAccount } from "@helpdesk/shared";
 
 export class ApiError extends Error {
   constructor(
@@ -111,6 +111,20 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify(body)
     }),
+  getDocument: (slug: string) =>
+    request<{ data: HelpdeskDocument }>(`/api/documents/${encodeURIComponent(slug)}`),
+  updateDocument: (slug: string, body: { title?: string; tags?: string[]; version?: string }) =>
+    request<{ data: HelpdeskDocument }>(`/api/documents/${encodeURIComponent(slug)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  listDocumentNodes: (slug: string) =>
+    request<{ data: { document: HelpdeskDocument; nodes: PageIndexNode[] } }>(`/api/documents/${encodeURIComponent(slug)}/nodes`),
+  createDocumentNode: (slug: string, body: { parentNodeId?: string; title: string; summary?: string; content: string }) =>
+    request<{ data: PageIndexNode }>(`/api/documents/${encodeURIComponent(slug)}/nodes`, { method: "POST", body: JSON.stringify(body) }),
+  updateDocumentNode: (slug: string, nodeId: string, body: { title?: string; summary?: string; content?: string }) =>
+    request<{ data: PageIndexNode }>(`/api/documents/${encodeURIComponent(slug)}/nodes/${encodeURIComponent(nodeId)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteDocumentNode: (slug: string, nodeId: string) =>
+    request<void>(`/api/documents/${encodeURIComponent(slug)}/nodes/${encodeURIComponent(nodeId)}`, { method: "DELETE" }),
+  regenerateDocSummary: (slug: string) =>
+    request<{ data: HelpdeskDocument }>(`/api/documents/${encodeURIComponent(slug)}/regenerate-summary`, { method: "POST" }),
   retrieve: (body: { query: string; tags?: string[]; topK?: number }) =>
     request<{ data: RetrievalResponseItem[] }>("/api/chat/retrieve", {
       method: "POST",

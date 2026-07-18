@@ -2,6 +2,7 @@
 
 import type { HelpdeskDocument, ImportSuggestion } from "@helpdesk/shared";
 import { Database, Sparkles, Upload } from "lucide-react";
+import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -182,7 +183,9 @@ export default function DocumentsPage() {
                 documents.map((document) => (
                   <tr key={document.id} className="border-t border-stone-100 hover:bg-stone-50/50">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-stone-800">{document.title}</div>
+                      <Link href={`/admin/documents/${encodeURIComponent(document.slug)}`} className="font-medium text-stone-800 hover:text-mint hover:underline">
+                        {document.title}
+                      </Link>
                       <div className="text-xs text-stone-500">{document.slug}</div>
                     </td>
                     <td className="px-4 py-3 text-stone-600">{document.tags.join(", ") || "-"}</td>
