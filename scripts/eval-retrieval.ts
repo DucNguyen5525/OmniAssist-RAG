@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { getMongoClient } from "../apps/web/lib/server/mongodb";
 import { getHelpdeskBySlug } from "../apps/web/lib/server/repository";
 import { aggregate, type QueryResult } from "../apps/web/lib/server/retrieval-metrics";
-import { normalize, retrievePageIndexNodes, type RetrievedNode } from "../apps/web/lib/server/retrieval";
+import { normalize, retrievePageIndexNodes, retrievePageIndexNodesExpanded, type RetrievedNode } from "../apps/web/lib/server/retrieval";
+import { expandQuery } from "../apps/web/lib/server/query-expansion";
 
 // Offline retrieval quality baseline. Runs the production `retrievePageIndexNodes`
 // scorer (no LLM routing, so numbers are deterministic) against a hand-written gold
@@ -72,7 +73,11 @@ function pad(value: string, width: number) {
 }
 
 async function main() {
-  const goldPath = fileURLToPath(new URL("./retrieval-goldset.json", import.meta.url));
+  // Default gold set, overridable with `--goldset <path>` (handy for trying candidate cases).
+  const goldArgIndex = process.argv.indexOf("--goldset");
+  const goldPath = goldArgIndex !== -1 && process.argv[goldArgIndex + 1]
+    ? process.argv[goldArgIndex + 1]
+    : fileURLToPath(new URL("./retrieval-goldset.json", import.meta.url));
   const goldSet = JSON.parse(readFileSync(goldPath, "utf8")) as GoldSet;
   const cases = goldSet.cases ?? [];
   if (cases.length === 0) throw new Error("No cases in scripts/retrieval-goldset.json");
@@ -85,19 +90,36 @@ async function main() {
     );
   }
 
+  // Opt-in: run the same gold set through LLM query expansion (Phase 1) so its effect can
+  // be compared against the plain baseline. One Gemini call per question; fail-open (an
+  // empty expansion falls back to the baseline scorer for that question).
+  const useExpansion = process.argv.includes("--expand") || process.env.EXPAND === "1";
+
   const results: QueryResult[] = [];
-  console.log(`Evaluating ${cases.length} question(s) against production retrieval\n`);
+  console.log(
+    `Evaluating ${cases.length} question(s) against production retrieval` +
+      `${useExpansion ? " WITH query expansion" : ""}\n`
+  );
   console.log(`${pad("hit", 5)}${pad("rank", 6)}${pad("topK", 6)}question`);
   console.log("-".repeat(72));
 
   for (const gold of cases) {
     const scope = await resolveScope(gold);
-    const retrieved = await retrievePageIndexNodes({
-      query: gold.question,
-      tags: scope.tags,
-      documentSlugs: scope.documentSlugs,
-      topK: scope.topK
-    });
+    const expansions = useExpansion ? await expandQuery(gold.question) : [];
+    const retrieved = expansions.length > 0
+      ? await retrievePageIndexNodesExpanded({
+          query: gold.question,
+          tags: scope.tags,
+          documentSlugs: scope.documentSlugs,
+          topK: scope.topK,
+          expansions
+        })
+      : await retrievePageIndexNodes({
+          query: gold.question,
+          tags: scope.tags,
+          documentSlugs: scope.documentSlugs,
+          topK: scope.topK
+        });
     const relevance = retrieved.map((item) => isRelevant(item, gold.expected));
     results.push({ relevance, totalRelevant: totalRelevant(gold.expected) });
 

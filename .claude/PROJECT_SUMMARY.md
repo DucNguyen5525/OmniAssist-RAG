@@ -188,7 +188,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
 - [x] Add tests for `flattenPageIndexTree`, retrieval scoring, and import-analyzer normalization (vitest, 14 tests; chat route with mocked Gemini still open).
 - [ ] Physically delete `apps/api/` and `supabase/` on a machine where Windows filesystem permits deletion.
-- [x] Phase 0: retrieval eval harness — `retrieval-metrics.ts` (+6 vitest), `scripts/eval-retrieval.ts` (`npm run eval:retrieval`), `scripts/retrieval-goldset.json`. Harness runs against live DB; **gold set still holds placeholder questions — fill with real Q→documentSlug/nodeIds/keywords to get a meaningful baseline.**
+- [x] Phase 0: retrieval eval harness — `retrieval-metrics.ts` (+6 vitest), `scripts/eval-retrieval.ts`, `scripts/retrieval-goldset.json`. Flags: `--expand` (run through Phase 1 query expansion), `--goldset <path>` (alt file). Gold set = 13 real tech-support cases (7 baseline-hit + 6 hard paraphrases that MISS under plain baseline); mined from chat logs + hand-verified against node content. Baseline (2026-07-22): hit@k 0.538, MRR 0.481.
 - [x] Phase 1: LLM query expansion — `query-expansion.ts` (`expandQuery`, fail-open), `retrievePageIndexNodesExpanded` (elementwise-max over original+expansions), per-helpdesk `queryExpansion` toggle (shared type + repository + both helpdesk API routes + dashboard checkbox), wired in `/api/chat` (pageindex, +1 LLM call when on). Measure impact with `eval:retrieval` once the gold set holds real questions.
 - [x] Phase 2: BM25 similar-question suggestions per helpdesk — `similar-questions.ts` (pure `rankSimilarQuestions` k1=1.5/b=0.75 + `findSimilarQuestions`, +5 vitest), `GET /api/chat/similar`, per-helpdesk `similarQuestions` toggle (shared type + repository + both helpdesk API routes + dashboard checkbox), `helpdeskSlug` stamped on conversations (index `{helpdeskSlug:1,updatedAt:-1}`), `getRecentHelpdeskQna` (pairs user→assistant, skips thumbs-down/empty). Chat UI: non-blocking-lite panel (`apiClient.getSimilarQuestions`, `runAsk` refactor, "Để AI trả lời" button), matches open past chat via `?session=` in a new tab.
 
@@ -266,6 +266,7 @@ npm run build
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
 npm run debug:retrieval '--' --helpdesk tech-support "câu hỏi cần debug"   # PS 5.1: phải quote '--'
 npm run eval:retrieval   # offline retrieval quality: hit@k/recall@k/MRR vs scripts/retrieval-goldset.json
+npx tsx --env-file=.env scripts/eval-retrieval.ts --expand   # same gold set WITH query expansion (Phase 1 A/B; 1 Gemini call/question)
 ```
 
 Python worker commands must be run only inside the approved Conda environment for this workspace.

@@ -5,19 +5,78 @@
     "should be routed to), nodeIds (specific PageIndex node _id values), or keywords",
     "(every keyword must appear in a retrieved node's title/summary/content).",
     "Scope a question with `helpdesk` (preferred, copies its topK/tags/documentSlugs) or",
-    "with `documentSlugs`/`tags`/`topK` directly. Replace these examples with real ones.",
-    "totalRelevant defaults to the number of nodeIds, else 1."
+    "with `documentSlugs`/`tags`/`topK` directly. totalRelevant defaults to the number of",
+    "nodeIds, else 1. Only pageindex-mode helpdesks are scored (amg has no PageIndex tree).",
+    "nodeIds are exact PageIndex node _id values; find them via the admin document view or",
+    "by inspecting the tech-support-manual document."
   ],
   "cases": [
     {
-      "question": "Làm sao để cài đặt lại máy P8?",
+      "question": "Làm sao sửa lỗi kết nối SIM 4G Verizon trên máy Dejavoo QD2?",
       "helpdesk": "tech-support",
-      "expected": { "keywords": ["p8"] }
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b17a3"] }
     },
     {
-      "question": "Hướng dẫn khắc phục lỗi kết nối mạng",
+      "question": "Phải làm gì khi máy chủ POS bị sập hoặc mất điện?",
       "helpdesk": "tech-support",
-      "expected": { "keywords": ["mang"] }
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b172d"] }
+    },
+    {
+      "question": "Cài đặt thực đơn điện tử qua Amazon Fire TV Stick như thế nào?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b1781"] }
+    },
+    {
+      "question": "cách set up mới một máy POS thế nào",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b177a"] }
+    },
+    {
+      "question": "Batch Reject QD error xu ly the nao?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b1758"] }
+    },
+    {
+      "question": "Update Auto Batch Time tren terminal lam the nao?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b175b"] }
+    },
+    {
+      "question": "Lam sao them ten nhan vien xu ly ticket len receipt tren may Dejavoo?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b17b2"] }
+    },
+
+    {
+      "_note": "Below: hard paraphrases that MISS under plain baseline (rank > topK). They use everyday merchant wording that shares few tokens with the answer node, so they exercise paraphrase recall (Phase 1 query expansion). Node labels verified against node content.",
+      "question": "Đang giờ cao điểm mà toàn bộ hệ thống tính tiền chết đứng, nhân viên không thu tiền được, tôi nên xử lý ra sao?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b172d"] }
+    },
+    {
+      "question": "Cuối ngày gom tiền thẻ để nộp về ngân hàng thì bị báo lỗi trùng, tiền chưa vào tài khoản, khắc phục kiểu gì?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b1758"] }
+    },
+    {
+      "question": "Vừa nhận một máy tính tiền còn mới nguyên, trước khi bàn giao cho tiệm cần chuẩn bị các bước gì?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b177a"] }
+    },
+    {
+      "question": "Cái máy ở quầy bật không lên hình, chỉ nghe kêu tít tít liên tục, giờ làm sao?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b177f"] }
+    },
+    {
+      "question": "Tiệm muốn đổi lại giờ máy tự động chốt sổ mỗi tối, chỉnh ở đâu?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b175b"] }
+    },
+    {
+      "question": "Tôi muốn hiển thị danh sách dịch vụ và giá lên màn hình tivi cho khách ngồi chờ xem, làm cách nào?",
+      "helpdesk": "tech-support",
+      "expected": { "nodeIds": ["6a52e8ed04d0c3178c3b1781"] }
     }
   ]
 }
