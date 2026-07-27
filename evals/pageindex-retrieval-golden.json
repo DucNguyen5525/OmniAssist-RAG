@@ -1,0 +1,367 @@
+[
+  {
+    "id": "exact-01",
+    "question": "Update Auto Batch Time or Set up Tax",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-02",
+    "question": "Set up Signature default digital signature",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-set-up-signature-default-digital-signature"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-03",
+    "question": "Payroll Issue",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-payroll-issue"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-04",
+    "question": "Internet Issue",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-f-hardware-connection-issues-internet-issue"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-05",
+    "question": "Digital Menu",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["digital-menu"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-06",
+    "question": "Dejavoo QD2 4G Verizon SIM",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["dejavoo-qd2-4g-verizon-sim"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-07",
+    "question": "Printer Fixes",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["printer-fixes"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-08",
+    "question": "Galaxy Go",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["galaxy-go"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-09",
+    "question": "SMS Purchase",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["sms-purchase"],
+    "category": "exact"
+  },
+  {
+    "id": "exact-10",
+    "question": "Ownership Change",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ownership-change"],
+    "category": "exact"
+  },
+  {
+    "id": "paraphrase-01",
+    "question": "Khách muốn đổi giờ tự động chốt batch trên máy thanh toán thì xử lý thế nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-02",
+    "question": "Nhân viên của tiệm bị tính lương sai, ticket cần làm những bước gì?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-payroll-issue"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-03",
+    "question": "Tổng tiền đã chốt không khớp với báo cáo bán hàng trên POS.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-sales-report-issue"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-04",
+    "question": "Làm sao bật hoặc tắt nhận thẻ American Express và Discover?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-05",
+    "question": "Cửa hàng mất mạng nên POS và terminal không kết nối được, cần kiểm tra gì?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-f-hardware-connection-issues-internet-issue"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-06",
+    "question": "Tiệm cần cộng tiền tip còn thiếu cho từ năm giao dịch POS trở lên.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-a-transactions-add-tips-5-pos-of-transactions-5-above"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-07",
+    "question": "Yêu cầu trả lại từ 200 đô cho khách thì bộ phận kỹ thuật phải chuyển ticket đi đâu?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-a-transactions-refund"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-08",
+    "question": "Khi doanh nghiệp đổi sang chủ sở hữu mới thì quy trình hỗ trợ ra sao?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ownership-change"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-09",
+    "question": "Khách chỉ muốn cập nhật tên DBA, số điện thoại hoặc địa chỉ cửa hàng.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-e-dba-phone-address-update"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-10",
+    "question": "Cần cấu hình thu tiền cọc khi khách đặt lịch trực tuyến.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-deposit-for-online-booking"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-11",
+    "question": "Chủ tiệm gọi xin tải danh sách khách hàng và thẻ quà tặng ra khỏi hệ thống.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-merchant-called-in-to-export-customer-gc-database-export-database"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-12",
+    "question": "Tiệm gửi file dữ liệu khách hàng và gift card để đưa vào POS thì phân công thế nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-merchant-called-in-to-export-customer-gc-database-import-database"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-13",
+    "question": "Màn hình Android cũ cứ tự tắt, cần cài công cụ nào để giữ màn hình sáng?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["keepandroid-screen-on"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-14",
+    "question": "Lấy thông tin thiết bị Android và lưu file theo serial number bằng ứng dụng nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["athena-get-android-device-info"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "paraphrase-15",
+    "question": "Ai chịu trách nhiệm thiết kế, tạo tài khoản thanh toán và training cho thẻ quà tặng bán online?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-online-gift-card"],
+    "category": "paraphrase"
+  },
+  {
+    "id": "mixed-01",
+    "question": "Cách setup tax và update auto batch time trên terminal?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-02",
+    "question": "Merchant muốn enable AMEX nhưng disable DISCOVER.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-03",
+    "question": "POS sales report bị mismatch với batch total thì research thế nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-sales-report-issue"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-04",
+    "question": "Workflow import GC và customer database do merchant gửi đến.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-merchant-called-in-to-export-customer-gc-database-import-database"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-05",
+    "question": "Setup Digital Signage bằng Firestick và nhập activation code ở đâu?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["digital-menu"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-06",
+    "question": "GalaxyGo cần tạo Mobile POS profile trên Portal như thế nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["galaxy-go"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-07",
+    "question": "Dejavoo QD2 Verizon SIM cần APN vzwinternet và LTE Only.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["dejavoo-qd2-4g-verizon-sim"],
+    "category": "mixed"
+  },
+  {
+    "id": "mixed-08",
+    "question": "Gold/Diamond plan chưa có SMS credits trên portal thì contact ai?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-sms-set-up-sms-set-up"],
+    "category": "mixed"
+  },
+  {
+    "id": "multi-section-01",
+    "question": "Mô tả toàn bộ quy trình triển khai online gift card từ thiết kế đến kiểm tra tiền về.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["online-gift-card", "ticket-workflow-1-c-pos-online-gift-card"],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-02",
+    "question": "Giao dịch được duyệt nhưng không hiện trên POS; nếu nó không settle thì cần làm tiếp các task nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [
+      "ticket-workflow-1-a-transactions-check-transaction-2",
+      "ticket-workflow-1-a-transactions-check-transaction-if-transaction-will-not-settle-please-create-the-following-task-2"
+    ],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-03",
+    "question": "So sánh cách add tip còn thiếu cho nhiều hơn 5 giao dịch trên POS và terminal.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [
+      "ticket-workflow-1-a-transactions-add-tips-5-pos-of-transactions-5-above",
+      "ticket-workflow-1-a-transactions-add-tips-5-terminal-of-transactions-5-above"
+    ],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-04",
+    "question": "Khi ticket bị overcharge thì nên giải thích lựa chọn sửa ticket và rerun đúng số tiền như thế nào?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [
+      "ticket-workflow-1-a-transactions-fix-ticket",
+      "ticket-workflow-1-a-transactions-rerun-overcharge-undercharge-base-amount-how-to-rerun-undercharge-overcharge-base-amoun"
+    ],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-05",
+    "question": "Đổi chủ doanh nghiệp cần reprogram POS hoặc terminal và check deposit ra sao?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [
+      "ownership-change",
+      "ticket-workflow-1-d-reprogram-after-boarding-pos-reprogram-terminal-reprogram-coo"
+    ],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-06",
+    "question": "Thiết bị vừa có lỗi phần cứng vừa mất kết nối Internet khiến merchant không process được.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [
+      "ticket-workflow-1-f-hardware-connection-issues-hardware-issue",
+      "ticket-workflow-1-f-hardware-connection-issues-internet-issue"
+    ],
+    "category": "multi-section"
+  },
+  {
+    "id": "multi-section-07",
+    "question": "Kiểm tra gói SMS hiện tại và hướng dẫn mua add-on khi plan chưa bao gồm credits.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["ticket-workflow-1-c-pos-sms-set-up-sms-set-up", "sms-purchase"],
+    "category": "multi-section"
+  },
+  {
+    "id": "image-01",
+    "question": "Cho tôi hướng dẫn bằng hình cách đăng ký Firestick cho Digital Menu.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["digital-menu"],
+    "category": "image"
+  },
+  {
+    "id": "image-02",
+    "question": "Tôi cần các ảnh minh họa từng bước setup Galaxy Go.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["galaxy-go"],
+    "category": "image"
+  },
+  {
+    "id": "image-03",
+    "question": "Xem ảnh lỗi và cách xử lý trong Android Troubleshoot.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["android-troubleshoot"],
+    "category": "image"
+  },
+  {
+    "id": "image-04",
+    "question": "Có hình hướng dẫn cài Wake Lock để màn hình Android luôn bật không?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["keepandroid-screen-on"],
+    "category": "image"
+  },
+  {
+    "id": "image-05",
+    "question": "Hiển thị các bước có ảnh để cấu hình Gateway Payment cho merchant.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": ["gateway-payment"],
+    "category": "image"
+  },
+  {
+    "id": "no-answer-01",
+    "question": "Chính sách hoàn vé máy bay quốc tế trong 24 giờ là gì?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [],
+    "category": "no-answer"
+  },
+  {
+    "id": "no-answer-02",
+    "question": "Làm sao khôi phục mật khẩu tài khoản Gmail cá nhân?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [],
+    "category": "no-answer"
+  },
+  {
+    "id": "no-answer-03",
+    "question": "Thời hạn bảo hành màn hình iPhone bị vỡ là bao lâu?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [],
+    "category": "no-answer"
+  },
+  {
+    "id": "no-answer-04",
+    "question": "Hướng dẫn cài Kubernetes cluster ba node trên Ubuntu.",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [],
+    "category": "no-answer"
+  },
+  {
+    "id": "no-answer-05",
+    "question": "Liều dùng kháng sinh cho trẻ bị viêm phổi là bao nhiêu?",
+    "helpdeskSlug": "tech-support",
+    "relevantNodeIds": [],
+    "category": "no-answer"
+  }
+]

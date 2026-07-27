@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-12 +07:00  
-**Session:** #18 - MD → PageIndex pipeline for Tech Support Manual; per-request model selection; retrieval scoring rebalance
+**Last Updated:** 2026-07-27 15:05 -04:00
+**Session:** #21 - GCLI key circuit breaker and compact PageIndex reference ablations
 
 ---
 
@@ -31,6 +31,10 @@ apps/web/app/api/helpdesks/       Helpdesk CRUD API routes
 apps/web/lib/server/              MongoDB, R2, GCLI/Gemini, Auth, PageIndex import/retrieval, tabular-qa modules
 apps/web/lib/server/tabular-qa.ts AMG-mode: LLM schema-linking + deterministic stats over dataset rows
 scripts/import-dataset.ts         Local importer for CSV/XLS clinical datasets (datasets/dataset_rows)
+scripts/eval-pageindex-retrieval.ts 50-case golden retrieval eval and JSON result artifacts
+scripts/spike-pageindex-architecture.ts Tree outline/storage/service feasibility measurements
+evals/                             PageIndex golden set and reproducible eval artifacts
+docs/adr/                          Architecture decisions backed by retrieval metrics
 scripts/extract-md-images.ts      Extracts base64 images from Google-Docs-exported MD into files + path refs
 scripts/md-to-pageindex.ts        Converts cleaned MD (heading tree + large-table row chunks) to PageIndex JSON
 scripts/generate-node-summaries.ts Gemini Vietnamese summaries per node (batched, idempotent) into pageindex JSON
@@ -121,6 +125,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | MongoDB data layer | Completed | `mongodb.ts`, `repository.ts` | Connection caching and collection indexes. |
 | Cloudflare R2 layer | Completed | `r2.ts`, importer modules | Used for optional PageIndex JSON backup. |
 | PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring: content term frequency (capped) + IDF weighting over candidate nodes (rare terms beat generic diacritic-stripped Vietnamese tokens) + IDF-weighted coverage bonus. |
+| PageIndex retrieval evolution | Completed (no production rollout) | `evals/*`, `pageindex-{tree,reasoning,retrieval}.ts`, `ADR-001` | 50-case lexical baseline is reproducible. Follow-up v5-v8 added a 401/403 key circuit breaker and optional compact node refs (38,439 -> 30,627 chars, full coverage). Best quality config still had p95 12.86s; fastest reliable config failed quality/no-answer gates. No full tree eval/canary was allowed. Lexical remains default. |
 | Vietnamese node summaries | Completed | `scripts/generate-node-summaries.ts` | Gemini (PAGEINDEX_MODEL) writes 1-2 câu tiếng Việt (giữ thuật ngữ Anh) per node into pageindex JSON, batched + idempotent (rerun fills failures); 140/142 tech-support nodes summarized + re-imported. Realistic mixed-language queries now rank target node #1; fully paraphrased VN queries remain a lexical limitation. |
 | Markdown answer rendering | Completed | `ChatMessageItem.tsx`, `tailwind.config.ts` | Assistant messages render via react-markdown + remark-gfm with @tailwindcss/typography prose styles; tables wrapped in overflow-x-auto; user messages stay plain text. |
 | User-facing UI cleanup | Completed | `ChatHeader/InputBar/MessageItem/EmptyState`, chat page, login page | Tech jargon (PageIndex RAG badge, TopK/Tags row, "Vectorless RAG · Antigravity AI") hidden from chat + login; citations panel renamed "Nguồn tham khảo"; admin/dashboard pages keep technical info. Model dropdown moved from header to above the chat input box. |
@@ -139,7 +144,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Tech Support Manual ingest + E2E test | Completed | MongoDB `tech-support-manual` doc | Imported (155 nodes, tags `helpdesk`,`tech-support`); chat E2E verified: DEJAVOO double-item question (VI + EN) and tip-setup question answered correctly with DEJAVOO ISSUES / Set up Tip citations. |
 | Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Not run in Vercel runtime. |
 | Authentication | Planning | None | Needed before public use. |
-| Automated tests | Planning | None | Not added yet. |
+| Automated tests | In Progress | `gemini.test.ts`, `pageindex-tree.test.ts`, `pageindex-reasoning.test.ts` | 10 GCLI circuit-breaker, PageIndex tree, compact-ref, and structured-selection tests pass; route/import/scoring coverage remains to be added. |
 
 **Legend:** Planning / In Progress / Completed
 
@@ -164,6 +169,9 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [ ] End-to-end test `amg` mode against a real dataset (e.g. verify proportion queries match the paper reports).
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
 - [ ] Add tests for `flattenPageIndexTree`, retrieval scoring, import route, and chat route with mocked Gemini.
+- [x] Execute `docs/plan-pageindex-retrieval-evolution.md`: 50-case golden set, reproducible baseline/regression, A/B/C spike, ADR, guarded dispatcher, tests, docs, typecheck, and build completed. Production rollout correctly stopped at the failed tree-reasoning latency gate.
+- [x] Prevent repeated invalid GCLI key usage: HTTP 401/403 now disables that key for the process; tested across consecutive requests.
+- [ ] Tree reasoning still fails the combined quality + p95 gate after v5-v8 ablations. Do not run full tree eval/canary until the upstream model route can meet both; production must remain `lexical`.
 - [ ] Physically delete `apps/api/` and `supabase/` on a machine where Windows filesystem permits deletion.
 
 ### Low Priority / Nice to Have
@@ -233,6 +241,9 @@ npm install
 npm run dev --workspace @helpdesk/web
 npm run typecheck
 npm run build
+npm run test:pageindex
+npm run eval:pageindex -- --helpdesk tech-support --strategy lexical --top-k 6
+npm run spike:pageindex
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
 ```
 

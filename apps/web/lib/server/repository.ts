@@ -221,6 +221,17 @@ export async function getNodesForDocuments(documentIds: ObjectId[], limitPerDocu
     .toArray();
 }
 
+export async function getAllNodesForDocuments(documentIds: ObjectId[], limitPerDocument = 500) {
+  if (documentIds.length === 0) return [];
+  const db = await getDb();
+  return db
+    .collection<PageIndexNodeRecord>("pageindex_nodes")
+    .find({ documentId: { $in: documentIds } })
+    .sort({ level: 1, nodeId: 1 })
+    .limit(documentIds.length * limitPerDocument)
+    .toArray();
+}
+
 export async function upsertDocumentWithNodes(input: {
   title: string;
   slug: string;

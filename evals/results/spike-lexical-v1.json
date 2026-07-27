@@ -1,0 +1,467 @@
+{
+  "timestamp": "2026-07-27T17:42:27.899Z",
+  "gitCommit": "3632ef44e25ca3c7b4c194e92e289532c5acfcb9",
+  "strategy": "lexical",
+  "version": "lexical-v1",
+  "model": null,
+  "topK": 6,
+  "caseCount": 15,
+  "aggregate": {
+    "hitAt1": 0.6,
+    "hitAt3": 0.6667,
+    "recallAtK": 0.6667,
+    "mrr": 0.6333,
+    "noAnswerFalsePositiveRate": 1,
+    "llmCallsPerQuery": 0,
+    "fallbackRate": 0,
+    "latencyMs": {
+      "p50": 779.7118,
+      "p95": 1961.6773,
+      "max": 1961.6773
+    }
+  },
+  "categories": {
+    "exact": {
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 1045.7502,
+        "p95": 1913.2932,
+        "max": 1913.2932
+      }
+    },
+    "paraphrase": {
+      "hitAt1": 0.25,
+      "hitAt3": 0.5,
+      "recallAtK": 0.5,
+      "mrr": 0.375,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 967.6203,
+        "p95": 1344.8523,
+        "max": 1344.8523
+      }
+    },
+    "mixed": {
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 464.1341,
+        "p95": 870.8011,
+        "max": 870.8011
+      }
+    },
+    "multi-section": {
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 418.7084,
+        "p95": 583.9545,
+        "max": 583.9545
+      }
+    },
+    "image": {
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 1961.6773,
+        "p95": 1961.6773,
+        "max": 1961.6773
+      }
+    },
+    "no-answer": {
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "mrr": 0,
+      "noAnswerFalsePositiveRate": 1,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 0,
+      "latencyMs": {
+        "p50": 663.0639,
+        "p95": 779.7118,
+        "max": 779.7118
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "exact-01",
+      "category": "exact",
+      "question": "Update Auto Batch Time or Set up Tax",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax",
+        "ticket-workflow-1-b-terminal-updates-common-updates-on-terminal",
+        "filebuild-filebuild-parameter-c-gplus-cfg-v008-for-app-settings-update-2025-11-26",
+        "updateversion",
+        "questions-trung-chris",
+        "workflow-confirmation-call"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 1045.7502,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "exact-02",
+      "category": "exact",
+      "question": "Set up Signature default digital signature",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-set-up-signature-default-digital-signature"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-set-up-signature-default-digital-signature",
+        "ticket-workflow-digital-signage-order",
+        "sms-email-receipt",
+        "digital-menu",
+        "terminals",
+        "done-ends-3-25-2025"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 1913.2932,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "exact-03",
+      "category": "exact",
+      "question": "Payroll Issue",
+      "relevantNodeIds": [
+        "ticket-workflow-1-c-pos-payroll-issue"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-c-pos-payroll-issue",
+        "bugs-issues-vi-mai-rows-16-30",
+        "tip-issues-2-16-2025",
+        "bugs-issues-vi-mai-rows-1-15",
+        "pos-issue-tickets",
+        "ticket-workflow-hardware-issue-replacement"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 700.9574,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "paraphrase-01",
+      "category": "paraphrase",
+      "question": "Khách muốn đổi giờ tự động chốt batch trên máy thanh toán thì xử lý thế nào?",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"
+      ],
+      "retrievedNodeIds": [
+        "bugs-issues-vi-mai-rows-1-15",
+        "ticket-workflow-1-a-transactions-rerun-overcharge-undercharge-base-amount-how-to-rerun-undercharge-overcharge-base-amoun",
+        "questions-trung-chris",
+        "castles-s1f2",
+        "fixed-rows-1-15",
+        "troubleshoot"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "reciprocalRank": 0,
+      "falsePositive": 0,
+      "latencyMs": 967.6203,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "paraphrase-02",
+      "category": "paraphrase",
+      "question": "Nhân viên của tiệm bị tính lương sai, ticket cần làm những bước gì?",
+      "relevantNodeIds": [
+        "ticket-workflow-1-c-pos-payroll-issue"
+      ],
+      "retrievedNodeIds": [
+        "subscription",
+        "changes-request-cuong-chung-rows-16-30-2",
+        "done-ends-3-25-2025",
+        "changes-request-cuong-chung-rows-1-15-2",
+        "ticket-workflow-1-a-transactions-fix-ticket",
+        "changes-request-cuong-chung-rows-46-58"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "reciprocalRank": 0,
+      "falsePositive": 0,
+      "latencyMs": 425.631,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "paraphrase-03",
+      "category": "paraphrase",
+      "question": "Tổng tiền đã chốt không khớp với báo cáo bán hàng trên POS.",
+      "relevantNodeIds": [
+        "ticket-workflow-1-c-pos-sales-report-issue"
+      ],
+      "retrievedNodeIds": [
+        "changes-request-cuong-chung-rows-31-45",
+        "ticket-workflow-1-c-pos-sales-report-issue",
+        "subscription",
+        "changes-request-cuong-chung",
+        "changes-request-cuong-chung-rows-46-58",
+        "pos-quick-start-blue"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 0.5,
+      "falsePositive": 0,
+      "latencyMs": 1282.0354,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "paraphrase-04",
+      "category": "paraphrase",
+      "question": "Làm sao bật hoặc tắt nhận thẻ American Express và Discover?",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover",
+        "changelog",
+        "the-appointment-theme-pink",
+        "crm-police-chris-duc-nguyen",
+        "faq",
+        "fixed-rows-1-15"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 1344.8523,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "mixed-01",
+      "category": "mixed",
+      "question": "Cách setup tax và update auto batch time trên terminal?",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax",
+        "ticket-workflow-1-b-terminal-updates-common-updates-on-terminal",
+        "questions-trung-chris",
+        "workflow-confirmation-call",
+        "full-guide",
+        "updateversion"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 870.8011,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "mixed-02",
+      "category": "mixed",
+      "question": "Merchant muốn enable AMEX nhưng disable DISCOVER.",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-turn-off-on-amex-or-discover",
+        "full-guide",
+        "crm-templates-new-order",
+        "cashier-id-clerk-id-in-dejavoo-if-the-merchant-wants-to-add-the-ticket-handler-s-name-to-the-receipt-that-is-the-clerk-i",
+        "faq",
+        "done-start-3-25-2025-rows-16-23"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 464.1341,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "multi-section-01",
+      "category": "multi-section",
+      "question": "Mô tả toàn bộ quy trình triển khai online gift card từ thiết kế đến kiểm tra tiền về.",
+      "relevantNodeIds": [
+        "online-gift-card",
+        "ticket-workflow-1-c-pos-online-gift-card"
+      ],
+      "retrievedNodeIds": [
+        "online-gift-card",
+        "ticket-workflow-1-c-pos-online-gift-card",
+        "bugs-issues-vi-mai-rows-46-59",
+        "setup-pos-example",
+        "crm-templates-new-order",
+        "workflow-confirmation-call"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 418.7084,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "multi-section-02",
+      "category": "multi-section",
+      "question": "Giao dịch được duyệt nhưng không hiện trên POS; nếu nó không settle thì cần làm tiếp các task nào?",
+      "relevantNodeIds": [
+        "ticket-workflow-1-a-transactions-check-transaction-2",
+        "ticket-workflow-1-a-transactions-check-transaction-if-transaction-will-not-settle-please-create-the-following-task-2"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-a-transactions-check-transaction-if-transaction-will-not-settle-please-create-the-following-task-2",
+        "ticket-workflow-1-a-transactions-check-transaction-if-transaction-will-not-settle-please-create-the-following-task",
+        "subscription",
+        "ticket-workflow-1-a-transactions-check-transaction-2",
+        "ticket-workflow-1-a-transactions-check-transaction",
+        "dejavoo-issues"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 583.9545,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "image-01",
+      "category": "image",
+      "question": "Cho tôi hướng dẫn bằng hình cách đăng ký Firestick cho Digital Menu.",
+      "relevantNodeIds": [
+        "digital-menu"
+      ],
+      "retrievedNodeIds": [
+        "digital-menu",
+        "ticket-workflow-digital-signage-order",
+        "ticket-workflow-1-b-terminal-updates-set-up-signature-default-digital-signature",
+        "changes-request-cuong-chung-rows-1-15",
+        "setup-new-account",
+        "done-ends-3-25-2025"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 1961.6773,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "no-answer-01",
+      "category": "no-answer",
+      "question": "Chính sách hoàn vé máy bay quốc tế trong 24 giờ là gì?",
+      "relevantNodeIds": [],
+      "retrievedNodeIds": [
+        "fixed-rows-1-15",
+        "pre-setup-pos",
+        "fixed-rows-16-28",
+        "changes-request-cuong-chung-rows-16-30-2",
+        "done-ends-3-25-2025",
+        "setup-training"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "reciprocalRank": 0,
+      "falsePositive": 1,
+      "latencyMs": 779.7118,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "no-answer-02",
+      "category": "no-answer",
+      "question": "Làm sao khôi phục mật khẩu tài khoản Gmail cá nhân?",
+      "relevantNodeIds": [],
+      "retrievedNodeIds": [
+        "workflow-confirmation-call",
+        "pre-setup-pos",
+        "windows",
+        "import-the-gc-and-customer-database",
+        "giftcard-track-format",
+        "faq"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "reciprocalRank": 0,
+      "falsePositive": 1,
+      "latencyMs": 663.0639,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    },
+    {
+      "id": "no-answer-03",
+      "category": "no-answer",
+      "question": "Thời hạn bảo hành màn hình iPhone bị vỡ là bao lâu?",
+      "relevantNodeIds": [],
+      "retrievedNodeIds": [
+        "changes-request-cuong-chung-rows-31-45",
+        "castles-s1f2",
+        "changes-request-cuong-chung",
+        "subscription",
+        "bugs-issues-vi-mai-rows-46-59",
+        "changes-request-cuong-chung-rows-1-15"
+      ],
+      "hitAt1": 0,
+      "hitAt3": 0,
+      "recallAtK": 0,
+      "reciprocalRank": 0,
+      "falsePositive": 1,
+      "latencyMs": 431.8728,
+      "llmCalls": 0,
+      "usedStrategy": "lexical"
+    }
+  ]
+}

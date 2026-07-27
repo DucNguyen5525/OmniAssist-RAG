@@ -1,6 +1,7 @@
 export type DocumentStatus = "ready" | "processing" | "failed";
 export type MessageRole = "user" | "assistant" | "system";
 export type RetrievalMode = "pageindex" | "amg";
+export type PageIndexRetrievalStrategy = "lexical" | "tree-reasoning" | "pageindex-service";
 
 export interface HelpdeskDocument {
   id: string;

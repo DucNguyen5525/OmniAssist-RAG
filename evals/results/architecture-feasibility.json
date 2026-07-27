@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-07-27T18:58:43.565Z",
+  "candidateA": {
+    "nodeCount": 155,
+    "rootCount": 81,
+    "outline30k": {
+      "includedNodes": 121,
+      "totalNodes": 155,
+      "coverage": 0.7806,
+      "truncated": true,
+      "chars": 29785,
+      "includesTicketWorkflow": true
+    },
+    "outline100k": {
+      "includedNodes": 155,
+      "totalNodes": 155,
+      "coverage": 1,
+      "truncated": false,
+      "chars": 38439,
+      "includesTicketWorkflow": true
+    },
+    "compactOutline50k": {
+      "includedNodes": 155,
+      "totalNodes": 155,
+      "coverage": 1,
+      "truncated": false,
+      "chars": 30627
+    }
+  },
+  "candidateB": {
+    "rawTreeSourceAvailable": false,
+    "documentsWithoutRawTreeSource": [
+      "tech-support-manual"
+    ],
+    "reconstructedFlatBytes": 417540,
+    "reconstructedNestedTreeBytes": 389753,
+    "mongoDocumentLimitBytes": 16777216,
+    "nestedTreeLimitUsage": 0.0232,
+    "fitsSingleMongoDocument": true,
+    "caveat": "Reconstructed tree is a feasibility proxy; flattened nodes cannot restore upstream metadata that was not persisted."
+  },
+  "candidateC": {
+    "publicSelfHostedRetrievalEngine": false,
+    "availableTools": [
+      "get_document",
+      "get_document_structure",
+      "get_page_content"
+    ],
+    "reference": "C:\\.dev\\.ref\\.rag\\PageIndex",
+    "implication": "A separate service would wrap the same tree/tool pattern and add network/operations without an additional public retrieval engine."
+  }
+}

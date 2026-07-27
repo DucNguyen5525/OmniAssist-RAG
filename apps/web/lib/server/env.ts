@@ -14,6 +14,15 @@ export interface ServerEnv {
   railwayWorkerUrl?: string;
 }
 
+export interface PageIndexRetrievalConfig {
+  strategy: "lexical" | "tree-reasoning" | "pageindex-service";
+  reasoningEnabled: boolean;
+  timeoutMs: number;
+  reasoningModel?: string;
+  maxOutlineChars: number;
+  compactRefs: boolean;
+}
+
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
@@ -76,4 +85,31 @@ export function requireR2Env() {
     bucketName: env.r2BucketName as string,
     publicBaseUrl: env.r2PublicBaseUrl
   };
+}
+
+export function getPageIndexRetrievalConfig(): PageIndexRetrievalConfig {
+  const strategyValue = process.env.PAGEINDEX_RETRIEVAL_STRATEGY;
+  const strategy =
+    strategyValue === "tree-reasoning" || strategyValue === "pageindex-service"
+      ? strategyValue
+      : "lexical";
+
+  return {
+    strategy,
+    reasoningEnabled: process.env.PAGEINDEX_REASONING_ENABLED === "true",
+    timeoutMs: clampIntegerEnv(process.env.PAGEINDEX_RETRIEVAL_TIMEOUT_MS, 12_000, 1_000, 60_000),
+    reasoningModel: process.env.PAGEINDEX_REASONING_MODEL?.trim() || undefined,
+    maxOutlineChars: clampIntegerEnv(
+      process.env.PAGEINDEX_REASONING_MAX_OUTLINE_CHARS,
+      50_000,
+      4_000,
+      100_000
+    ),
+    compactRefs: process.env.PAGEINDEX_REASONING_COMPACT_REFS === "true"
+  };
+}
+
+function clampIntegerEnv(value: string | undefined, fallback: number, min: number, max: number) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, min), max) : fallback;
 }

@@ -30,6 +30,15 @@ export async function getDb(): Promise<Db> {
   return client.db(env.mongodbDb);
 }
 
+export async function closeMongoClient() {
+  const promise = globalThis.helpdeskMongoClientPromise;
+  globalThis.helpdeskMongoClientPromise = undefined;
+  if (promise) {
+    const client = await promise;
+    await client.close();
+  }
+}
+
 export async function ensureMongoIndexes() {
   const db = await getDb();
   await Promise.all([

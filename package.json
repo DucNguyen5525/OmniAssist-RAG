@@ -13,6 +13,9 @@
     "typecheck": "npm run typecheck --workspace @helpdesk/shared && npm run typecheck --workspace @helpdesk/web",
     "import:pageindex": "tsx scripts/import-pageindex.ts",
     "import:dataset": "tsx scripts/import-dataset.ts",
+    "eval:pageindex": "tsx scripts/eval-pageindex-retrieval.ts",
+    "spike:pageindex": "tsx scripts/spike-pageindex-architecture.ts",
+    "test:pageindex": "tsx --test apps/web/lib/server/gemini.test.ts apps/web/lib/server/pageindex-tree.test.ts apps/web/lib/server/pageindex-reasoning.test.ts",
     "train:shock": "tsx scripts/train-shock-model.ts"
   },
   "devDependencies": {

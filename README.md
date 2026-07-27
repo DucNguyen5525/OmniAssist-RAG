@@ -18,7 +18,9 @@ Data flow:
 
 1. Source files (PDF/Markdown) are processed by the Python worker into PageIndex JSON.
 2. Flattened PageIndex nodes are stored in MongoDB Atlas.
-3. Chat requests use keyword/title/path/summary/content ranking over PageIndex nodes.
+3. Chat requests use the configured PageIndex strategy. Production defaults to lexical
+   keyword/title/path/summary/content ranking; experimental tree reasoning falls back
+   to lexical on any failure.
 4. Retrieved context is sent to Gemini with a grounded-answer prompt.
 5. Answers return source references with document title, section path, and page range.
 
@@ -54,6 +56,20 @@ npm install
 ### 2. Configure environment variables
 
 Copy `.env.example` → `.env` and fill in values. See [ENV_SETUP_GUIDE.md](./ENV_SETUP_GUIDE.md) for detailed instructions on obtaining each key.
+
+PageIndex retrieval defaults are intentionally safe:
+
+```env
+PAGEINDEX_RETRIEVAL_STRATEGY=lexical
+PAGEINDEX_REASONING_ENABLED=false
+PAGEINDEX_RETRIEVAL_TIMEOUT_MS=12000
+PAGEINDEX_REASONING_MODEL=gemini-3-flash-preview
+PAGEINDEX_REASONING_MAX_OUTLINE_CHARS=50000
+PAGEINDEX_REASONING_COMPACT_REFS=false
+```
+
+Do not enable tree reasoning in production until it passes the gates in
+[`ADR-001`](./docs/adr/ADR-001-pageindex-retrieval-architecture.md).
 
 ### 3. Run locally
 
@@ -155,6 +171,9 @@ Railway is optional. Use it only for long-running PageIndex processing or schedu
 ## Verification
 
 ```bash
+npm run test:pageindex
+npm run eval:pageindex -- --helpdesk tech-support --strategy lexical --top-k 6
+npm run spike:pageindex
 npm run typecheck
 npm run build
 ```
@@ -168,6 +187,7 @@ Manual runtime checks:
 ## MVP Limits
 
 - No authentication yet; add auth before public use.
-- Retrieval is lexical/PageIndex-structure based, not semantic vector retrieval.
+- Retrieval remains vectorless. Lexical is the production strategy; tree reasoning is
+  experimental and disabled by default.
 - PageIndex processing is external to the app runtime.
 - R2 backup is optional for imports.

@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-07-27T18:10:01.564Z",
+  "gitCommit": "3632ef44e25ca3c7b4c194e92e289532c5acfcb9",
+  "strategy": "pageindex-service",
+  "version": "pageindex-tree-reasoning-v1",
+  "model": null,
+  "topK": 6,
+  "caseCount": 1,
+  "aggregate": {
+    "hitAt1": 1,
+    "hitAt3": 1,
+    "recallAtK": 1,
+    "mrr": 1,
+    "noAnswerFalsePositiveRate": null,
+    "llmCallsPerQuery": 0,
+    "fallbackRate": 1,
+    "latencyMs": {
+      "p50": 1003.6971,
+      "p95": 1003.6971,
+      "max": 1003.6971
+    }
+  },
+  "categories": {
+    "exact": {
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "noAnswerFalsePositiveRate": null,
+      "llmCallsPerQuery": 0,
+      "fallbackRate": 1,
+      "latencyMs": {
+        "p50": 1003.6971,
+        "p95": 1003.6971,
+        "max": 1003.6971
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "exact-01",
+      "category": "exact",
+      "question": "Update Auto Batch Time or Set up Tax",
+      "relevantNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax"
+      ],
+      "retrievedNodeIds": [
+        "ticket-workflow-1-b-terminal-updates-update-auto-batch-time-or-set-up-tax",
+        "ticket-workflow-1-b-terminal-updates-common-updates-on-terminal",
+        "filebuild-filebuild-parameter-c-gplus-cfg-v008-for-app-settings-update-2025-11-26",
+        "updateversion",
+        "questions-trung-chris",
+        "workflow-confirmation-call"
+      ],
+      "hitAt1": 1,
+      "hitAt3": 1,
+      "recallAtK": 1,
+      "reciprocalRank": 1,
+      "falsePositive": 0,
+      "latencyMs": 1003.6971,
+      "llmCalls": 0,
+      "usedStrategy": "lexical",
+      "fallbackReason": "service_not_configured"
+    }
+  ]
+}

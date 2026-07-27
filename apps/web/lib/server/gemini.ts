@@ -62,14 +62,15 @@ export class SmoothWeightedRoundRobin {
   }
 
   public getNext(): KeyItem {
-    if (this.items.length === 0) {
+    const activeItems = this.items.filter((item) => item.effectiveWeight > 0);
+    if (activeItems.length === 0) {
       throw new Error("Không có key nào trong danh sách xoay vòng.");
     }
 
     let totalWeight = 0;
     let best: SWRRItem | null = null;
 
-    for (const item of this.items) {
+    for (const item of activeItems) {
       item.currentWeight += item.effectiveWeight;
       totalWeight += item.effectiveWeight;
 
@@ -90,6 +91,13 @@ export class SmoothWeightedRoundRobin {
       label: best.label,
     };
   }
+
+  public disable(key: string): void {
+    const item = this.items.find((candidate) => candidate.key === key);
+    if (!item) return;
+    item.effectiveWeight = 0;
+    item.currentWeight = 0;
+  }
 }
 
 export class WeightedRandom {
@@ -100,21 +108,27 @@ export class WeightedRandom {
   }
 
   public getNext(): KeyItem {
-    if (this.items.length === 0) {
+    const activeItems = this.items.filter((item) => item.weight > 0);
+    if (activeItems.length === 0) {
       throw new Error("Không có key nào trong danh sách xoay vòng.");
     }
 
-    const totalWeight = this.items.reduce((sum, item) => sum + item.weight, 0);
+    const totalWeight = activeItems.reduce((sum, item) => sum + item.weight, 0);
     let randomVal = Math.random() * totalWeight;
 
-    for (const item of this.items) {
+    for (const item of activeItems) {
       if (randomVal < item.weight) {
         return item;
       }
       randomVal -= item.weight;
     }
 
-    return this.items[this.items.length - 1];
+    return activeItems[activeItems.length - 1];
+  }
+
+  public disable(key: string): void {
+    const item = this.items.find((candidate) => candidate.key === key);
+    if (item) item.weight = 0;
   }
 }
 
@@ -145,6 +159,21 @@ export class GCLIKeyRotator {
       return this.wrRotator.getNext();
     }
     throw new Error("No rotator initialized.");
+  }
+
+  public disableKey(key: string): void {
+    this.swrrRotator?.disable(key);
+    this.wrRotator?.disable(key);
+  }
+}
+
+class GCLIHttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string
+  ) {
+    super(message);
+    this.name = "GCLIHttpError";
   }
 }
 
@@ -182,7 +211,8 @@ export class ResilientGCLIClient {
   public async createChatCompletion(
     model: string,
     messages: Array<{ role: string; content: string }>,
-    options: Record<string, unknown> = {}
+    options: Record<string, unknown> = {},
+    signal?: AbortSignal
   ): Promise<{ content: string; usedLabel: string; triedLabels: string[] }> {
     const maxRetries = this.rotator.keysConfig.length;
     let attempts = 0;
@@ -205,6 +235,7 @@ export class ResilientGCLIClient {
       try {
         const response = await fetch(endpoint, {
           method: "POST",
+          signal,
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${keyInfo.key}`,
@@ -218,7 +249,7 @@ export class ResilientGCLIClient {
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
+          throw new GCLIHttpError(response.status, `HTTP ${response.status}: ${errorText.slice(0, 400)}`);
         }
 
         const data = await response.json();
@@ -227,6 +258,11 @@ export class ResilientGCLIClient {
         return { content, usedLabel: keyInfo.label, triedLabels };
       } catch (error) {
         const errObj = error instanceof Error ? error : new Error(String(error));
+        if (signal?.aborted) throw new Error("GCLI request aborted.");
+        if (errObj instanceof GCLIHttpError && (errObj.status === 401 || errObj.status === 403)) {
+          this.rotator.disableKey(keyInfo.key);
+          console.warn(`Disabling rejected GCLI key '${keyInfo.label}' for this process.`);
+        }
         console.warn(`⚠️ Error using key '${keyInfo.label}': ${errObj.message}`);
         lastError = errObj;
         if (attempts >= maxRetries) {
@@ -272,10 +308,11 @@ export function resolveRequestedModel(requested?: string): string {
 export async function generateChatCompletion(
   messages: Array<{ role: string; content: string }>,
   options: Record<string, unknown> = {},
-  model?: string
+  model?: string,
+  signal?: AbortSignal
 ): Promise<string> {
   const { client } = getResilientClient();
-  const result = await client.createChatCompletion(resolveRequestedModel(model), messages, options);
+  const result = await client.createChatCompletion(resolveRequestedModel(model), messages, options, signal);
   return result.content.trim();
 }
 

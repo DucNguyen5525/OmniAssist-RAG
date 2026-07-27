@@ -9,7 +9,8 @@ import {
   getDatasetRows,
   getHelpdeskBySlug
 } from "@/lib/server/repository";
-import { retrievePageIndexNodes, toSourceReference } from "@/lib/server/retrieval";
+import { retrievePageIndex } from "@/lib/server/pageindex-retrieval";
+import { toSourceReference } from "@/lib/server/retrieval";
 import { generateTabularAnswer } from "@/lib/server/tabular-qa";
 
 export const runtime = "nodejs";
@@ -65,9 +66,15 @@ export async function POST(request: Request) {
       answer = result.answer;
       sources = result.sources;
     } else {
-      const retrieved = await retrievePageIndexNodes({ query: input.question, tags, documentSlugs, topK });
-      answer = await generateGroundedAnswer(input.question, retrieved, systemPrompt, model);
-      sources = retrieved.map(toSourceReference);
+      const retrieval = await retrievePageIndex({
+        query: input.question,
+        tags,
+        documentSlugs,
+        topK,
+        model
+      });
+      answer = await generateGroundedAnswer(input.question, retrieval.nodes, systemPrompt, model);
+      sources = retrieval.nodes.map(toSourceReference);
     }
 
     await addMessage({ conversationId: conversation.id, role: "assistant", content: answer, sources });

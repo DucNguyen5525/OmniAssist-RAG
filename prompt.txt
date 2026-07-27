@@ -1,3 +1,25 @@
-﻿Bây giờ tôi có các loại file dữ liệu dùng để truy vấn là loại txt, pdf, docs (chưa nằm trong này), html (kèm folder images là các ảnh đính kèm trong html), md dùng để truy vấn để trả lời câu hỏi từ người dùng. Bạn hãy giúp tôi trả lời các câu sau:
-1. Bạn xem loại file nào sẽ phù hợp nhất để làm lưu trữ truy vấn. CHú ý là mỗi file rất nặng, đừng đọc hết chúng.
-2. Nếu tôi dùng html kèm images làm truy vấn thì khi hỏi AI có thể gửi file đó kèm các ảnh trong folder images liên quan đến nội dung trả lời kèm note từ file gốc không?
+﻿### 📀 RAG (Retrieval Augmented Generation)
+
+*Retrieval pipelines, from simple chains to agentic and multi-source.*
+
+*   [🔥 Agentic RAG with Embedding Gemma](rag_tutorials/agentic_rag_embedding_gemma) - Fully local agentic RAG with EmbeddingGemma and Llama 3.2
+*   [🧐 Agentic RAG with Reasoning](rag_tutorials/agentic_rag_with_reasoning/) - Watch the agent's step-by-step reasoning as it retrieves
+*   [📰 AI Blog Search (RAG)](rag_tutorials/ai_blog_search/) - Agentic search over blog content, built on LangGraph
+*   [🔍 Autonomous RAG](rag_tutorials/autonomous_rag/) - GPT-4o answers from your PDFs, falls back to web search
+*   [🔄 Contextual AI RAG Agent](rag_tutorials/contextualai_rag_agent/) - Managed RAG: datastore to grounded chat in minutes
+*   [🔄 Corrective RAG (CRAG)](rag_tutorials/corrective_rag/) - Retrieval that grades itself and retries before answering
+*   [📎 Typed Agentic RAG with Pydantic AI](rag_tutorials/agentic_typed_rag_pydanticai/) - Validated answers with exact citations, or a refusal when evidence is weak
+*   [🐋 Deepseek Local RAG Agent](rag_tutorials/deepseek_local_rag_agent/) - Local DeepSeek reasoning over your own documents
+*   [🤔 Gemini Agentic RAG](rag_tutorials/gemini_agentic_rag/) - Query rewriting and web fallback with Gemini Flash Thinking
+*   [👀 Hybrid Search RAG (Cloud)](rag_tutorials/hybrid_search_rag/) - Keyword plus vector search feeding Claude
+*   [🔄 Llama 3.1 Local RAG](rag_tutorials/llama3.1_local_rag/) - Chat with any webpage, fully offline
+*   [🖥️ Local Hybrid Search RAG](rag_tutorials/local_hybrid_search_rag/) - Hybrid search with everything running on your machine
+*   [🧬 Multimodal Agentic RAG](rag_tutorials/multimodal_agentic_rag/) - Text, PDFs, images, audio, and video, answered with citations
+*   [🦙 Local RAG Agent](rag_tutorials/local_rag_agent/) - Llama 3.2 and Qdrant, no API keys required
+*   [🧩 RAG-as-a-Service](rag_tutorials/rag-as-a-service/) - A production RAG service in under 50 lines
+*   [✨ RAG Agent with Cohere](rag_tutorials/rag_agent_cohere/) - Command R7B retrieval with web-search fallback
+*   [⛓️ Basic RAG Chain](rag_tutorials/rag_chain/) - The minimal retrieval pipeline, applied to pharma research
+*   [📠 RAG with Database Routing](rag_tutorials/rag_database_routing/) - Routes each question to the right database automatically
+*   [🖼️ Vision RAG](rag_tutorials/vision_rag/) - Ask questions about images and PDF pages with Embed-4
+*   [🩺 RAG Failure Diagnostics Clinic](rag_tutorials/rag_failure_diagnostics_clinic/) - Find out why your RAG pipeline is wrong, systematically
+*   [🕸️ Knowledge Graph RAG with Citations](rag_tutorials/knowledge_graph_rag_citations/) - Multi-hop answers with verifiable source attribution
