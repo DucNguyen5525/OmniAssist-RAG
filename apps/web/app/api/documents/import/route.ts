@@ -9,6 +9,8 @@ const importSchema = z.object({
   slug: z.string().min(1),
   tags: z.array(z.string()).optional(),
   version: z.string().optional(),
+  producer: z.enum(["vectify-pageindex", "internal-md-converter", "unknown"]).optional(),
+  producerVersion: z.string().optional(),
   sourceFileUrl: z.string().optional(),
   indexFileUrl: z.string().optional(),
   backupToR2: z.boolean().optional(),

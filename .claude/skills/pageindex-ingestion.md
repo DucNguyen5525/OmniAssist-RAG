@@ -27,7 +27,8 @@ Tài liệu nguồn (PDF / MD / TXT / DOCX / XLSX / PPTX / HTML / CSV)
 ┌─────────────────────────────────┐
 │  MongoDB Atlas                  │
 │  Collection: documents          │  ← Metadata tài liệu (title, slug, tags, status)
-│  Collection: pageindex_nodes    │  ← Các node nội dung đã flatten (dùng cho retrieval)
+│  Collection: pageindex_trees    │  ← Raw tree bất biến + producer/hash/version
+│  Collection: pageindex_nodes    │  ← Read model đã flatten (dùng cho retrieval)
 └─────────────────────────────────┘
 ```
 
@@ -35,28 +36,31 @@ Tài liệu nguồn (PDF / MD / TXT / DOCX / XLSX / PPTX / HTML / CSV)
 
 ### Python environment
 
-- **BẮT BUỘC** dùng Conda environment, KHÔNG dùng system Python.
-- Activation: `conda activate D:\Dev\conda-envs\py310`
-- Working directory: `D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest`
+- **BẮT BUỘC** dùng virtualenv `.venv-pageindex`, KHÔNG dùng system Python.
+- PageIndex/LiteLLM đã pin cần Python `<3.14`; dùng runtime 3.13 trong
+  `.python-3.13`.
+- Working directory: root repository `OmniAssist-RAG`.
 
 ### Cài đặt dependencies
 
-```bash
-conda activate D:\Dev\conda-envs\py310
-cd D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest
-pip install -r requirements.txt
+```powershell
+py install --target=.python-3.13 -y 3.13
+.\.python-3.13\python.exe -m venv .venv-pageindex
+.\.venv-pageindex\Scripts\python.exe -m pip install `
+  -r workers/pageindex-ingest/requirements.txt `
+  -r C:/path/to/PageIndex/requirements.txt
 ```
 
 Dependencies (`requirements.txt`):
 - `pymongo==4.8.0` — kết nối MongoDB
 - `boto3==1.34.149` — upload lên Cloudflare R2 (S3-compatible)
-- `python-dotenv==1.0.1` — đọc file `.env`
+- `python-dotenv==1.2.2` — đọc file `.env`
 - `requests==2.32.3` — HTTP requests
 - `markitdown` — tự động convert Word, Excel, PPT, HTML, CSV sang Markdown
 
 ### Biến môi trường (`.env`)
 
-File `.env` đặt tại **root dự án** (`D:\Dev\3.pjs\helpdesk-Dify\.env`). Python worker dùng `python-dotenv` để load.
+File `.env` đặt tại **root dự án**. Python worker dùng `python-dotenv` để load.
 
 | Biến | Bắt buộc | Mô tả |
 |------|----------|-------|
@@ -71,7 +75,10 @@ File `.env` đặt tại **root dự án** (`D:\Dev\3.pjs\helpdesk-Dify\.env`). 
 | `R2_SECRET_ACCESS_KEY` | ❌* | R2 API Token Secret |
 | `R2_BUCKET_NAME` | ❌* | Tên R2 bucket |
 | `R2_PUBLIC_BASE_URL` | ❌ | URL public của bucket (nếu có custom domain) |
-| `PAGEINDEX_COMMAND` | ❌ | Override lệnh PageIndex CLI (mặc định: `python -m pageindex --input {source} --output {output}`) |
+| `PAGEINDEX_DIR` | ✅ khi xử lý source | Checkout VectifyAI/PageIndex đúng commit trong `pageindex-reference.lock.json` |
+| `PAGEINDEX_EXPECTED_COMMIT` | ❌ | Override commit đã pin; mặc định đọc từ lock file |
+| `PAGEINDEX_ALLOW_UNPINNED` | ❌ | Chỉ đặt `true` cho thử nghiệm có chủ đích |
+| `PAGEINDEX_COMMAND` | ❌ | Advanced override; mặc định gọi `run_pageindex.py --pdf_path/--md_path` |
 
 > (*) Chỉ bắt buộc khi muốn backup file lên R2. Nếu không cần, dùng flag `--skip-r2`.
 
@@ -138,15 +145,12 @@ Agent: Đã xác nhận. Tiến hành import vào helpdesk "Bảo hành sản ph
 
 Khi bạn **đã có file PageIndex JSON** (tạo thủ công hoặc từ nguồn khác):
 
-```bash
-conda activate D:\Dev\conda-envs\py310
-cd D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest
-
-python import_pageindex_to_mongo.py ^
-  --index-json "./data/my-document-pageindex.json" ^
-  --title "Tên tài liệu hiển thị" ^
-  --slug "ten-tai-lieu-url-safe" ^
-  --tags "tag1,tag2,tag3" ^
+```powershell
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py `
+  --index-json "./data/my-document-pageindex.json" `
+  --title "Tên tài liệu hiển thị" `
+  --slug "ten-tai-lieu-url-safe" `
+  --tags "tag1,tag2,tag3" `
   --skip-r2
 ```
 
@@ -154,17 +158,14 @@ python import_pageindex_to_mongo.py ^
 
 Khi bạn có **file nguồn gốc** (PDF, Markdown, TXT, Word `.docx`, Excel `.xlsx`, PowerPoint `.pptx`, HTML, CSV) và đã cài đặt VectifyAI/PageIndex locally. Các định dạng ngoài PDF/MD sẽ được tự động chuyển đổi sang Markdown bằng MarkItDown trước khi phân tích:
 
-```bash
-conda activate D:\Dev\conda-envs\py310
-cd D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest
-
+```powershell
 # Nhận trực tiếp bất kỳ định dạng file nào:
-python import_pageindex_to_mongo.py ^
-  --source "./data/my-document.docx" ^
-  --title "Tên tài liệu" ^
-  --slug "ten-tai-lieu" ^
-  --tags "helpdesk,faq" ^
-  --output-dir "./output" ^
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py `
+  --source "./data/my-document.docx" `
+  --title "Tên tài liệu" `
+  --slug "ten-tai-lieu" `
+  --tags "helpdesk,faq" `
+  --output-dir "./output" `
   --skip-r2
 ```
 
@@ -290,19 +291,16 @@ Script này duyệt đệ quy cây JSON và tạo danh sách phẳng các node:
 
 ### Ví dụ 1: Tạo file JSON thủ công và import
 
-```bash
+```powershell
 # 1. Tạo file JSON tại workers/pageindex-ingest/data/
 #    (Xem cấu trúc JSON ở phần trên)
 
 # 2. Import vào MongoDB
-conda activate D:\Dev\conda-envs\py310
-cd D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest
-
-python import_pageindex_to_mongo.py ^
-  --index-json "./data/huong-dan-bao-hanh.json" ^
-  --title "Hướng dẫn bảo hành sản phẩm" ^
-  --slug "huong-dan-bao-hanh" ^
-  --tags "helpdesk,warranty,faq" ^
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py `
+  --index-json "./data/huong-dan-bao-hanh.json" `
+  --title "Hướng dẫn bảo hành sản phẩm" `
+  --slug "huong-dan-bao-hanh" `
+  --tags "helpdesk,warranty,faq" `
   --skip-r2
 ```
 
@@ -323,27 +321,27 @@ Dùng cùng `--slug` để cập nhật. Hệ thống sẽ:
 3. Xóa toàn bộ node cũ
 4. Import lại node mới
 
-```bash
-python import_pageindex_to_mongo.py ^
-  --index-json "./data/huong-dan-bao-hanh-v2.json" ^
-  --title "Hướng dẫn bảo hành sản phẩm (Cập nhật)" ^
-  --slug "huong-dan-bao-hanh" ^
-  --tags "helpdesk,warranty,faq,updated" ^
+```powershell
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py `
+  --index-json "./data/huong-dan-bao-hanh-v2.json" `
+  --title "Hướng dẫn bảo hành sản phẩm (Cập nhật)" `
+  --slug "huong-dan-bao-hanh" `
+  --tags "helpdesk,warranty,faq,updated" `
   --skip-r2
 ```
 
 ### Ví dụ 3: Xử lý PDF gốc (cần cài VectifyAI/PageIndex)
 
-```bash
+```powershell
 # Cần cài đặt PageIndex CLI trước
-# pip install pageindex  (hoặc clone repo VectifyAI/PageIndex)
+# Clone đúng commit trong pageindex-reference.lock.json
 
-python import_pageindex_to_mongo.py ^
-  --source "./data/policy-document.pdf" ^
-  --title "Chính sách công ty" ^
-  --slug "chinh-sach-cong-ty" ^
-  --tags "policy,internal" ^
-  --output-dir "./output" ^
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py `
+  --source "./data/policy-document.pdf" `
+  --title "Chính sách công ty" `
+  --slug "chinh-sach-cong-ty" `
+  --tags "policy,internal" `
+  --output-dir "./output" `
   --skip-r2
 ```
 
@@ -360,7 +358,7 @@ python import_pageindex_to_mongo.py ^
 
 ### Lỗi `Missing required environment variable`
 
-- Đảm bảo file `.env` tồn tại tại `D:\Dev\3.pjs\helpdesk-Dify\.env`
+- Đảm bảo file `.env` tồn tại tại root repository
 - Worker dùng `python-dotenv` để load `.env` từ working directory. Nếu chạy từ thư mục khác, copy hoặc symlink file `.env`
 
 ### Lỗi `No PageIndex nodes found in JSON`
@@ -371,10 +369,10 @@ python import_pageindex_to_mongo.py ^
 
 ### Lỗi `ModuleNotFoundError`
 
-```bash
-conda activate D:\Dev\conda-envs\py310
-cd D:\Dev\3.pjs\helpdesk-Dify\workers\pageindex-ingest
-pip install -r requirements.txt
+```powershell
+.\.venv-pageindex\Scripts\python.exe -m pip install `
+  -r workers/pageindex-ingest/requirements.txt `
+  -r C:/path/to/PageIndex/requirements.txt
 ```
 
 ---
@@ -383,7 +381,7 @@ pip install -r requirements.txt
 
 1. **KHÔNG** chạy worker này từ trong Next.js runtime hoặc API route
 2. **KHÔNG** dùng embeddings hoặc pgvector — hệ thống dùng keyword scoring (vectorless)
-3. **KHÔNG** dùng system Python — luôn activate conda env trước
+3. **KHÔNG** dùng system Python — luôn dùng `.venv-pageindex`
 4. **Slug là unique key** — dùng cùng slug sẽ cập nhật (upsert) document đã tồn tại
 5. **Dữ liệu cũ bị xóa khi re-import** — toàn bộ node cũ của document bị xóa trước khi import node mới
 6. Sau khi import, hệ thống chat RAG tự động sử dụng dữ liệu mới mà không cần restart

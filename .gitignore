@@ -6,6 +6,10 @@ dist/
 .env.*.local
 npm-debug.log*
 coverage/
+__pycache__/
+*.py[cod]
+.venv*/
+.python-*/
 .vercel/
 .railway/
 .data/

@@ -1,7 +1,8 @@
 # Kế hoạch — Nâng cấp PageIndex Retrieval theo hướng eval-first
 
 **Ngày:** 2026-07-27  
-**Trạng thái:** Sẵn sàng cho session triển khai khác  
+**Trạng thái:** Hoàn tất Phase 1–5 và Phase 7; Phase 6 không triển khai vì
+tree-reasoning không vượt quality/latency gate, production tiếp tục dùng lexical
 **Mục tiêu:** Nâng chất lượng retrieval của OmniAssist-RAG, cho phép thay đổi kiến trúc hiện tại nếu phương án mới chứng minh tốt hơn bằng cùng một bộ đánh giá.
 
 ---
@@ -795,59 +796,59 @@ MongoDB/citations vẫn là authority trong Next.js để service không thể t
 
 ### Phase 1 — Eval foundation
 
-- [ ] Tạo golden dataset 50 case.
-- [ ] Human-verify node IDs.
-- [ ] Viết eval script.
-- [ ] Lưu lexical baseline.
+- [x] Tạo golden dataset 50 case.
+- [x] Human-verify node IDs.
+- [x] Viết eval script.
+- [x] Lưu lexical baseline.
 
 **Không bắt đầu reasoning trước khi phase này hoàn tất.**
 
 ### Phase 2 — Architecture spike
 
-- [ ] Spike A trên 15 case.
-- [ ] Đo raw-tree size và feasibility cho B.
-- [ ] Kiểm tra SDK/service API thực tế cho C và pin version khả dụng.
-- [ ] Chỉ spike D nếu có nhu cầu managed/vision.
-- [ ] Ghi metrics, latency, cost và complexity.
+- [x] Spike A trên 15 case.
+- [x] Đo raw-tree size và feasibility cho B.
+- [x] Kiểm tra SDK/service API thực tế cho C và pin version khả dụng.
+- [x] Không spike D vì chưa có nhu cầu managed/vision.
+- [x] Ghi metrics, latency, cost và complexity.
 
 ### Phase 3 — ADR
 
-- [ ] Viết ADR weighted score.
-- [ ] Chọn candidate.
-- [ ] Chốt migration/rollback.
-- [ ] Chốt file-level implementation.
+- [x] Viết ADR weighted score.
+- [x] Chọn candidate.
+- [x] Chốt migration/rollback.
+- [x] Chốt file-level implementation.
 
 ### Phase 4 — Implementation
 
-- [ ] Implement retriever contract/dispatcher.
-- [ ] Implement candidate thắng.
-- [ ] Scope validation.
-- [ ] Diagnostics/fallback.
-- [ ] Tests.
+- [x] Implement retriever contract/dispatcher.
+- [x] Implement candidate thắng ở chế độ experimental.
+- [x] Scope validation.
+- [x] Diagnostics/fallback.
+- [x] Tests.
 
 ### Phase 5 — Full eval
 
-- [ ] Chạy toàn bộ 50 case.
-- [ ] Phân tích theo category.
-- [ ] Điều tra failure cases.
-- [ ] Thay một biến mỗi lần.
-- [ ] Ghi pass/fail quality gate.
+- [x] Chạy toàn bộ 50 case.
+- [x] Phân tích theo category.
+- [x] Điều tra failure cases.
+- [x] Thay một biến mỗi lần.
+- [x] Ghi pass/fail quality gate.
 
 ### Phase 6 — Rollout nếu pass
 
-- [ ] Feature flag mặc định false.
-- [ ] Shadow/canary một helpdesk.
-- [ ] Manual E2E.
-- [ ] Theo dõi latency/fallback/citation.
-- [ ] Mở rộng hoặc rollback.
+- [x] Feature flag mặc định false.
+- [x] Không shadow/canary vì candidate không vượt gate.
+- [x] Manual E2E không áp dụng cho production rollout bị chặn.
+- [x] Metrics latency/fallback/citation đã được lưu trong eval artifacts.
+- [x] Giữ/rollback về lexical theo ADR-001.
 
 ### Phase 7 — Handoff
 
-- [ ] Typecheck.
-- [ ] Targeted tests.
-- [ ] Production build.
-- [ ] README/env/docs.
-- [ ] Cập nhật `PROJECT_SUMMARY.md`.
+- [x] Typecheck.
+- [x] Targeted tests.
+- [x] Production build.
+- [x] README/env/docs.
+- [x] Cập nhật `PROJECT_SUMMARY.md`.
 
 ---
 

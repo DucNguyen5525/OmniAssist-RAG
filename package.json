@@ -14,8 +14,12 @@
     "import:pageindex": "tsx scripts/import-pageindex.ts",
     "import:dataset": "tsx scripts/import-dataset.ts",
     "eval:pageindex": "tsx scripts/eval-pageindex-retrieval.ts",
+    "eval:ragas": "node scripts/run-python.mjs --venv .venv-ragas scripts/eval-ragas-answer-quality.py",
+    "smoke:pageindex-ingestion": "node scripts/run-python.mjs --venv .venv-pageindex workers/pageindex-ingest/smoke_ingestion_e2e.py",
     "spike:pageindex": "tsx scripts/spike-pageindex-architecture.ts",
-    "test:pageindex": "tsx --test apps/web/lib/server/gemini.test.ts apps/web/lib/server/pageindex-tree.test.ts apps/web/lib/server/pageindex-reasoning.test.ts",
+    "test:pageindex": "tsx --test apps/web/lib/server/gemini.test.ts apps/web/lib/server/pageindex-artifact.test.ts apps/web/lib/server/pageindex-flatten.test.ts apps/web/lib/server/pageindex-tree.test.ts apps/web/lib/server/pageindex-reasoning.test.ts",
+    "test:pageindex-python": "node scripts/run-python.mjs -m unittest discover -s workers/pageindex-ingest -p \"test_*.py\"",
+    "test:ragas-python": "node scripts/run-python.mjs --venv .venv-ragas -m unittest discover -s evals/ragas -p \"test_*.py\"",
     "train:shock": "tsx scripts/train-shock-model.ts"
   },
   "devDependencies": {

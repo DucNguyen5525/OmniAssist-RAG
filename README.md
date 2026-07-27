@@ -17,7 +17,9 @@ workers/pageindex-ingest    Python worker for document processing & import
 Data flow:
 
 1. Source files (PDF/Markdown) are processed by the Python worker into PageIndex JSON.
-2. Flattened PageIndex nodes are stored in MongoDB Atlas.
+2. The immutable raw tree plus producer/hash metadata is stored in
+   `pageindex_trees`; flattened nodes are stored in `pageindex_nodes` as a
+   derived retrieval read model.
 3. Chat requests use the configured PageIndex strategy. Production defaults to lexical
    keyword/title/path/summary/content ranking; experimental tree reasoning falls back
    to lexical on any failure.
@@ -39,6 +41,7 @@ Data flow:
 
 - `documents`
 - `pageindex_nodes`
+- `pageindex_trees`
 - `conversations`
 - `messages`
 - `feedback`
@@ -94,21 +97,60 @@ There are 3 ways to import documents into the system:
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
 ```
 
+The importer accepts both the official VectifyAI/PageIndex
+`structure/node_id/start_index/end_index` schema and the internal camelCase
+schema. Use `--producer-version <commit>` when the JSON came from a known
+PageIndex checkout.
+
 ### Option C: Python Worker (process PDF/Markdown → MongoDB)
 
 Use `workers/pageindex-ingest/` to process source PDFs/Markdown into PageIndex JSON and import into MongoDB.
 
-```bash
-conda activate D:\Dev\conda-envs\py310
-cd workers/pageindex-ingest
-pip install -r requirements.txt
+```powershell
+# Clone and pin the PageIndex producer used by this project
+git clone https://github.com/VectifyAI/PageIndex.git C:/path/to/PageIndex
+git -C C:/path/to/PageIndex checkout 39121c4d3479edeb049fb1e37045f3227bf50355
+
+# PageIndex's pinned LiteLLM requires Python <3.14
+py install --target=.python-3.13 -y 3.13
+.\.python-3.13\python.exe -m venv .venv-pageindex
+.\.venv-pageindex\Scripts\python.exe -m pip install `
+  -r workers/pageindex-ingest/requirements.txt `
+  -r C:/path/to/PageIndex/requirements.txt
+$env:PAGEINDEX_DIR='C:/path/to/PageIndex'
 
 # From existing PageIndex JSON
-python import_pageindex_to_mongo.py --index-json ./data/warranty-pageindex.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty --skip-r2
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py --index-json ./data/warranty-pageindex.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty --skip-r2
 
-# From source PDF (requires VectifyAI/PageIndex installed)
-python import_pageindex_to_mongo.py --source ./data/warranty.pdf --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty --skip-r2
+# From source PDF using the pinned checkout
+.\.venv-pageindex\Scripts\python.exe workers/pageindex-ingest/import_pageindex_to_mongo.py --source ./data/warranty.pdf --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty --skip-r2
 ```
+
+The worker verifies the checkout against
+`workers/pageindex-ingest/pageindex-reference.lock.json`, calls the real
+`run_pageindex.py --pdf_path/--md_path` entrypoint, and records the commit as
+`producerVersion`.
+
+## Offline answer-quality evaluation
+
+Deterministic retrieval evaluation remains the deployment gate. Ragas is an
+optional, offline second layer for answer faithfulness, context precision,
+answer relevancy, context recall, and factual correctness.
+
+```powershell
+# Install the exact audited Ragas reference
+py -3.14 -m venv .venv-ragas
+.\.venv-ragas\Scripts\python.exe -m pip install -r evals/ragas/requirements.txt
+
+# Validate a collected dataset without an LLM call
+npm run eval:ragas -- --input evals/ragas-answer-eval.example.json --validate-only
+
+# Run the paid/non-deterministic judge offline
+npm run eval:ragas -- --input evals/ragas-answer-eval.json
+```
+
+See [`docs/ragas-offline-evaluation.md`](./docs/ragas-offline-evaluation.md).
+Ragas results do not enable tree reasoning automatically.
 
 > **📘 Full guide**: See [`.claude/skills/pageindex-ingestion.md`](./.claude/skills/pageindex-ingestion.md) for complete documentation including JSON schema, troubleshooting, and examples.
 
@@ -172,7 +214,11 @@ Railway is optional. Use it only for long-running PageIndex processing or schedu
 
 ```bash
 npm run test:pageindex
+npm run test:pageindex-python
+npm run test:ragas-python
 npm run eval:pageindex -- --helpdesk tech-support --strategy lexical --top-k 6
+npm run eval:ragas -- --input evals/ragas-answer-eval.example.json --validate-only
+npm run smoke:pageindex-ingestion -- --index-json evals/fixtures/pageindex-worker-smoke.json
 npm run spike:pageindex
 npm run typecheck
 npm run build
@@ -190,4 +236,5 @@ Manual runtime checks:
 - Retrieval remains vectorless. Lexical is the production strategy; tree reasoning is
   experimental and disabled by default.
 - PageIndex processing is external to the app runtime.
-- R2 backup is optional for imports.
+- R2 backup is optional for trees below the safe MongoDB inline limit. Larger
+  raw trees require `indexFileUrl` or R2 backup.

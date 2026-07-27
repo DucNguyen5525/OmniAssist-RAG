@@ -1,0 +1,5 @@
+ragas @ git+https://github.com/vibrantlabsai/ragas.git@298b68274234c060deacab3cf5fb52aa3a20e885
+# Ragas at the pinned commit still imports ChatVertexAI from this module.
+# langchain-community 0.4.2 removed it and breaks import at runtime.
+langchain-community==0.4.1
+python-dotenv==1.2.2

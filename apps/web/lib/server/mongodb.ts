@@ -46,6 +46,8 @@ export async function ensureMongoIndexes() {
     db.collection("documents").createIndex({ status: 1, tags: 1 }),
     db.collection("pageindex_nodes").createIndex({ documentId: 1, nodeId: 1 }, { unique: true }),
     db.collection("pageindex_nodes").createIndex({ documentId: 1, level: 1 }),
+    db.collection("pageindex_trees").createIndex({ documentId: 1, contentHash: 1 }, { unique: true }),
+    db.collection("pageindex_trees").createIndex({ documentId: 1, createdAt: -1 }),
     db.collection("conversations").createIndex({ updatedAt: -1 }),
     db.collection("messages").createIndex({ conversationId: 1, createdAt: 1 }),
     db.collection("feedback").createIndex({ messageId: 1 }),

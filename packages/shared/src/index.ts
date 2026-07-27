@@ -11,6 +11,10 @@ export interface HelpdeskDocument {
   indexFileUrl?: string;
   status: DocumentStatus;
   version?: string;
+  indexSchemaVersion?: number;
+  producer?: "vectify-pageindex" | "internal-md-converter" | "unknown";
+  producerVersion?: string;
+  contentHash?: string;
   tags: string[];
   createdAt: string;
   updatedAt: string;

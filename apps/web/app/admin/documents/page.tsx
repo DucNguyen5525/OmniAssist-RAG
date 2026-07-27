@@ -184,6 +184,14 @@ export default function DocumentsPage() {
                     <td className="px-4 py-3">
                       <div className="font-medium text-stone-800">{document.title}</div>
                       <div className="text-xs text-stone-500">{document.slug}</div>
+                      {document.producer ? (
+                        <div className="mt-0.5 text-[11px] text-stone-400">
+                          {document.producer}
+                          {document.producerVersion
+                            ? ` @ ${document.producerVersion.slice(0, 12)}`
+                            : ""}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-stone-600">{document.tags.join(", ") || "-"}</td>
                     <td className="px-4 py-3"><StatusBadge status={document.status} /></td>

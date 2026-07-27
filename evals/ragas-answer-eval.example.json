@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "id": "example-start-batch",
+      "user_input": "Tôi bắt đầu một batch như thế nào?",
+      "retrieved_contexts": [
+        "Open the batch screen and select Start."
+      ],
+      "response": "Mở màn hình batch rồi chọn Start.",
+      "reference": "Người dùng cần mở màn hình batch và chọn Start."
+    },
+    {
+      "id": "example-close-batch",
+      "user_input": "Cần làm gì trước khi đóng batch?",
+      "retrieved_contexts": [
+        "Review totals before selecting Close."
+      ],
+      "response": "Hãy kiểm tra lại tổng số trước khi chọn Close.",
+      "reference": "Kiểm tra tổng số trước khi đóng batch."
+    }
+  ]
+}

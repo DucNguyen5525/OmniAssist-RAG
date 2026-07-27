@@ -53,7 +53,7 @@ export function toSourceReference(item: RetrievedNode): SourceReference {
     pageStart: item.node.pageStart,
     pageEnd: item.node.pageEnd,
     sourceRef: item.node.sourceRef,
-    preview: item.node.content.slice(0, 260),
+    preview: (item.node.content || item.node.summary || "").slice(0, 260),
     score: item.score,
     images: extractImageUrls(item.node.content)
   };

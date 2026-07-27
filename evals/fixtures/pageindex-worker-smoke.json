@@ -1,0 +1,32 @@
+{
+  "doc_name": "pageindex-worker-smoke",
+  "line_count": 17,
+  "structure": [
+    {
+      "title": "OmniAssist Worker Smoke Manual",
+      "node_id": "0001",
+      "line_num": 1,
+      "text": "# OmniAssist Worker Smoke Manual",
+      "nodes": [
+        {
+          "title": "Start a support batch",
+          "node_id": "0002",
+          "line_num": 3,
+          "text": "## Start a support batch\n\nOpen the Operations screen, choose **New batch**, enter the terminal identifier,\nand select **Start**. A started batch receives a unique batch number."
+        },
+        {
+          "title": "Close a support batch",
+          "node_id": "0003",
+          "line_num": 8,
+          "text": "## Close a support batch\n\nReview the cash and card totals before selecting **Close batch**. If the totals\ndo not match, keep the batch open and ask a supervisor to review the variance."
+        },
+        {
+          "title": "Escalation",
+          "node_id": "0004",
+          "line_num": 13,
+          "text": "## Escalation\n\nEscalate a failed close operation to the Payments Support queue. Include the\nbatch number, terminal identifier, and the displayed error code."
+        }
+      ]
+    }
+  ]
+}

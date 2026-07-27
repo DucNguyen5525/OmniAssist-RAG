@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-07-27T21:38:45.945928+00:00",
+  "input": "evals/ragas-answer-eval.example.json",
+  "model": "gemini-3-flash-preview",
+  "maxTokens": 4096,
+  "baseUrlConfigured": true,
+  "caseCount": 2,
+  "referencesComplete": true,
+  "metrics": [
+    "faithfulness",
+    "llm_context_precision_without_reference",
+    "answer_relevancy",
+    "context_recall",
+    "factual_correctness"
+  ],
+  "aggregate": {
+    "faithfulness": 0.75,
+    "llm_context_precision_without_reference": 0.9999999999,
+    "answer_relevancy": 1.0,
+    "context_recall": 1.0,
+    "factual_correctness": 0.835
+  },
+  "cases": [
+    {
+      "id": "example-start-batch",
+      "faithfulness": 1.0,
+      "llm_context_precision_without_reference": 0.9999999999,
+      "answer_relevancy": 1,
+      "context_recall": 1.0,
+      "factual_correctness": 1.0
+    },
+    {
+      "id": "example-close-batch",
+      "faithfulness": 0.5,
+      "llm_context_precision_without_reference": 0.9999999999,
+      "answer_relevancy": 1,
+      "context_recall": 1.0,
+      "factual_correctness": 0.67
+    }
+  ]
+}

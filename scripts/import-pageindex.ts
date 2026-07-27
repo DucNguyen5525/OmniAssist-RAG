@@ -7,6 +7,9 @@ interface Args {
   title?: string;
   slug?: string;
   tags?: string;
+  version?: string;
+  producer?: "vectify-pageindex" | "internal-md-converter" | "unknown";
+  producerVersion?: string;
   sourceFileUrl?: string;
   indexFileUrl?: string;
   backupToR2?: boolean;
@@ -23,6 +26,9 @@ async function main() {
     title: args.title,
     slug: args.slug,
     tags: splitTags(args.tags),
+    version: args.version,
+    producer: args.producer,
+    producerVersion: args.producerVersion,
     sourceFileUrl: args.sourceFileUrl,
     indexFileUrl: args.indexFileUrl,
     backupToR2: args.backupToR2,
@@ -44,10 +50,14 @@ function parseArgs(argv: string[]): Args {
     }
     if (!value || value.startsWith("--")) continue;
     i += 1;
-    const name = key.slice(2) as keyof Args;
+    const name = toCamelCase(key.slice(2)) as keyof Args;
     args[name] = value as never;
   }
   return args;
+}
+
+function toCamelCase(value: string) {
+  return value.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 function splitTags(value?: string) {

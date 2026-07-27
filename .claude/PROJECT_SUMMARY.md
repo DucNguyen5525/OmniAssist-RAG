@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-27 15:05 -04:00
-**Session:** #21 - GCLI key circuit breaker and compact PageIndex reference ablations
+**Last Updated:** 2026-07-27 17:50 -04:00
+**Session:** #22 - PageIndex/Ragas reference integration and live operational smoke tests
 
 ---
 
@@ -126,6 +126,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Cloudflare R2 layer | Completed | `r2.ts`, importer modules | Used for optional PageIndex JSON backup. |
 | PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring: content term frequency (capped) + IDF weighting over candidate nodes (rare terms beat generic diacritic-stripped Vietnamese tokens) + IDF-weighted coverage bonus. |
 | PageIndex retrieval evolution | Completed (no production rollout) | `evals/*`, `pageindex-{tree,reasoning,retrieval}.ts`, `ADR-001` | 50-case lexical baseline is reproducible. Follow-up v5-v8 added a 401/403 key circuit breaker and optional compact node refs (38,439 -> 30,627 chars, full coverage). Best quality config still had p95 12.86s; fastest reliable config failed quality/no-answer gates. No full tree eval/canary was allowed. Lexical remains default. |
+| Reference integration hardening | Completed | `pageindex-{flatten,artifact}.ts`, Python ingestion worker, `evals/ragas/*` | Official VectifyAI schema now imports correctly (upstream sample: 1 bogus node before -> 41 valid nodes after). Raw trees are versioned with producer/hash metadata, PageIndex and Ragas commits are pinned. Live smoke tests passed for the pinned PageIndex worker, R2 + Mongo persistence/cleanup, and all five Ragas metrics through GCLI. Production retrieval remains lexical. |
 | Vietnamese node summaries | Completed | `scripts/generate-node-summaries.ts` | Gemini (PAGEINDEX_MODEL) writes 1-2 câu tiếng Việt (giữ thuật ngữ Anh) per node into pageindex JSON, batched + idempotent (rerun fills failures); 140/142 tech-support nodes summarized + re-imported. Realistic mixed-language queries now rank target node #1; fully paraphrased VN queries remain a lexical limitation. |
 | Markdown answer rendering | Completed | `ChatMessageItem.tsx`, `tailwind.config.ts` | Assistant messages render via react-markdown + remark-gfm with @tailwindcss/typography prose styles; tables wrapped in overflow-x-auto; user messages stay plain text. |
 | User-facing UI cleanup | Completed | `ChatHeader/InputBar/MessageItem/EmptyState`, chat page, login page | Tech jargon (PageIndex RAG badge, TopK/Tags row, "Vectorless RAG · Antigravity AI") hidden from chat + login; citations panel renamed "Nguồn tham khảo"; admin/dashboard pages keep technical info. Model dropdown moved from header to above the chat input box. |
@@ -137,14 +138,14 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Tabular-QA retrieval mode (`amg`) | Completed | `tabular-qa.ts`, `/api/chat`, `import-dataset.ts`, dashboard/settings UI | LLM plans query → code computes count/proportion (categorical equals OR numeric threshold via compare/value)/mean/median/min/max/groupBy/correlation over `dataset_rows`; numbers computed in TS (not LLM). Per-helpdesk `retrievalMode` + `datasetSlug`. Ingest of dengue CSV/XLS is user-run. |
 | Shock-risk prediction | Completed | `prediction.ts`, `scripts/train-shock-model.ts`, `/api/predict`, `/predict/[modelSlug]`, repository `prediction_models` | TS logistic regression on paper1 `dengue-baseline` enrolment features (no leakage); 5-fold CV AUROC 0.787; artifact stored in Mongo; `/api/predict` GET model info + POST case→probability + top contributions; `/predict/shock-baseline` case-input form (public route). Research tool only, not clinical. Train via `npm run train:shock`. |
 | GCLI Key Rotation LLM layer | Completed | `gemini.ts`, `env.ts`, `/api/chat` | Replaces raw Gemini SDK with SWRR/Weighted Random key rotation, failover, model mapping. |
-| PageIndex import API/UI | Completed | `/api/documents/import`, admin documents page | Imports existing PageIndex JSON. |
+| PageIndex import API/UI | Completed | `/api/documents/import`, admin documents page | Imports official `structure/node_id/start_index/end_index` and internal camelCase JSON; stores the raw artifact plus producer/hash metadata and a flattened retrieval read model. |
 | Local TS import script | Completed | `scripts/import-pageindex.ts` | `npm run import:pageindex -- --file ...`. |
 | MD base64 image extraction | Completed | `scripts/extract-md-images.ts` | Ran on `.data/Docs/Tech Support Manual.md`: 561 images extracted, cleaned MD 41MB → 281KB in `Tech Support Manual-extracted/`. On PowerShell call `npx tsx scripts/extract-md-images.ts --file ...` (npm swallows `--`). |
 | MD → PageIndex JSON converter | Completed | `scripts/md-to-pageindex.ts` | Heading tree → node tree; tables with >15 data rows split into child chunk nodes (header repeated). Tech Support Manual: 155 nodes (24 table chunks). |
 | Tech Support Manual ingest + E2E test | Completed | MongoDB `tech-support-manual` doc | Imported (155 nodes, tags `helpdesk`,`tech-support`); chat E2E verified: DEJAVOO double-item question (VI + EN) and tip-setup question answered correctly with DEJAVOO ISSUES / Set up Tip citations. |
-| Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Not run in Vercel runtime. |
+| Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Uses pinned PageIndex commit `39121c4`, Python 3.13 in `.venv-pageindex`, calls the real upstream entrypoint, validates evidence text, and records producer version. `smoke:pageindex-ingestion` verifies R2 + Mongo then cleans up exact smoke artifacts. Not run in Vercel runtime. |
 | Authentication | Planning | None | Needed before public use. |
-| Automated tests | In Progress | `gemini.test.ts`, `pageindex-tree.test.ts`, `pageindex-reasoning.test.ts` | 10 GCLI circuit-breaker, PageIndex tree, compact-ref, and structured-selection tests pass; route/import/scoring coverage remains to be added. |
+| Automated tests | In Progress | `gemini.test.ts`, `pageindex-{artifact,flatten,tree,reasoning}.test.ts`, Python worker/Ragas tests | 15 TypeScript, 4 PageIndex Python, and 3 Ragas Python tests pass; route/import/scoring coverage remains to be added. |
 
 **Legend:** Planning / In Progress / Completed
 
@@ -156,7 +157,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 
 - [x] Run `npm install` to update dependencies.
 - [ ] Refresh or regenerate `package-lock.json` if needed.
-- [ ] Verify MongoDB Atlas and R2 credentials in a real environment.
+- [x] Verify MongoDB Atlas and R2 credentials in a real environment (write/read/delete smoke passed with cleanup verification).
 - [ ] Add authentication/admin gate before public deployment.
 
 ### Medium Priority
@@ -168,7 +169,8 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [x] Images in chat answers: 561 images enhanced (normalize+sharpen) → WebP (29.3MB→7.5MB) in `apps/web/public/doc-images/tech-support-manual/`; node refs rewritten to `/doc-images/...webp`; sources carry `images[]` (thumbnails in citations drawer); Gemini instructed to inline relevant image tags (verified: Clerk ID answer embedded image453 at the right step). R2 hosting can replace public/ later if credentials are configured.
 - [ ] End-to-end test `amg` mode against a real dataset (e.g. verify proportion queries match the paper reports).
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
-- [ ] Add tests for `flattenPageIndexTree`, retrieval scoring, import route, and chat route with mocked Gemini.
+- [x] Add official-schema and artifact tests for `flattenPageIndexTree` in TypeScript and Python.
+- [ ] Add tests for retrieval scoring, import route, and chat route with mocked Gemini.
 - [x] Execute `docs/plan-pageindex-retrieval-evolution.md`: 50-case golden set, reproducible baseline/regression, A/B/C spike, ADR, guarded dispatcher, tests, docs, typecheck, and build completed. Production rollout correctly stopped at the failed tree-reasoning latency gate.
 - [x] Prevent repeated invalid GCLI key usage: HTTP 401/403 now disables that key for the process; tested across consecutive requests.
 - [ ] Tree reasoning still fails the combined quality + p95 gate after v5-v8 ablations. Do not run full tree eval/canary until the upstream model route can meet both; production must remain `lexical`.
@@ -176,7 +178,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 
 ### Low Priority / Nice to Have
 
-- [ ] Add richer PageIndex schema normalization if real PageIndex JSON differs from supported shapes.
+- [x] Normalize the audited official PageIndex schema and preserve its raw artifact/producer metadata.
 - [ ] Add streaming Gemini responses.
 - [ ] Add feedback UI and API route for `feedback` collection.
 
@@ -220,10 +222,10 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 ### Testing checklist:
 
 - [ ] `npm install`
-- [ ] `npm run build --workspace @helpdesk/shared`
-- [ ] `npm run typecheck`
-- [ ] `npm run build`
-- [ ] Import PageIndex JSON against real MongoDB/R2.
+- [x] `npm run build --workspace @helpdesk/shared`
+- [x] `npm run typecheck`
+- [x] `npm run build`
+- [x] Import PageIndex JSON against real MongoDB/R2.
 - [ ] Ask a chat question and verify sources.
 
 ### Do not forget to:
@@ -242,12 +244,17 @@ npm run dev --workspace @helpdesk/web
 npm run typecheck
 npm run build
 npm run test:pageindex
+npm run test:pageindex-python
+npm run test:ragas-python
 npm run eval:pageindex -- --helpdesk tech-support --strategy lexical --top-k 6
+npm run eval:ragas -- --input evals/ragas-answer-eval.example.json --validate-only
+npm run smoke:pageindex-ingestion -- --index-json evals/fixtures/pageindex-worker-smoke.json
 npm run spike:pageindex
 npm run import:pageindex -- --file ./data/warranty-index.json --title "Warranty Policy" --slug warranty-policy --tags helpdesk,warranty
 ```
 
-Python worker commands must be run only inside the approved Conda environment for this workspace.
+PageIndex worker commands use `.venv-pageindex` (Python 3.13); Ragas commands
+use `.venv-ragas` (Python 3.14). Both environments are local and git-ignored.
 
 ---
 

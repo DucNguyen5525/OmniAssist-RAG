@@ -1,6 +1,8 @@
 import { ObjectId, type Document as MongoDocument } from "mongodb";
 import type { ChatMessage, ChatSession, DatasetColumn, DatasetInfo, Helpdesk, HelpdeskDocument, PageIndexNode, RetrievalMode, SourceReference } from "@helpdesk/shared";
 import { ensureMongoIndexes, getDb } from "./mongodb";
+import type { PageIndexArtifactMetadata } from "./pageindex-artifact";
+import type { PageIndexProducer } from "./pageindex-flatten";
 
 export interface DocumentRecord extends MongoDocument {
   _id: ObjectId;
@@ -10,6 +12,10 @@ export interface DocumentRecord extends MongoDocument {
   indexFileUrl?: string;
   status: "ready" | "processing" | "failed";
   version?: string;
+  indexSchemaVersion?: number;
+  producer?: PageIndexProducer;
+  producerVersion?: string;
+  contentHash?: string;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +51,20 @@ export interface CreatePageIndexNodeInput {
   pageEnd?: number;
   sourceRef?: string;
   childrenIds: string[];
+}
+
+export interface PageIndexTreeRecord extends MongoDocument {
+  _id: ObjectId;
+  documentId: ObjectId;
+  schemaVersion: number;
+  producer: PageIndexProducer;
+  producerVersion?: string;
+  contentHash: string;
+  byteSize: number;
+  nodeCount: number;
+  indexFileUrl?: string;
+  rawTree?: unknown;
+  createdAt: Date;
 }
 
 export interface ConversationRecord extends MongoDocument {
@@ -113,6 +133,10 @@ export function serializeDocument(record: DocumentRecord): HelpdeskDocument {
     indexFileUrl: record.indexFileUrl,
     status: record.status,
     version: record.version,
+    indexSchemaVersion: record.indexSchemaVersion,
+    producer: record.producer,
+    producerVersion: record.producerVersion,
+    contentHash: record.contentHash,
     tags: record.tags ?? [],
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
@@ -240,6 +264,7 @@ export async function upsertDocumentWithNodes(input: {
   version?: string;
   tags?: string[];
   nodes: CreatePageIndexNodeInput[];
+  artifact: PageIndexArtifactMetadata;
 }) {
   await ensureMongoIndexes();
   const db = await getDb();
@@ -257,6 +282,10 @@ export async function upsertDocumentWithNodes(input: {
         indexFileUrl: input.indexFileUrl,
         status: "ready",
         version: input.version,
+        indexSchemaVersion: input.artifact.schemaVersion,
+        producer: input.artifact.producer,
+        producerVersion: input.artifact.producerVersion,
+        contentHash: input.artifact.contentHash,
         tags: input.tags ?? [],
         updatedAt: now
       },
@@ -289,6 +318,29 @@ export async function upsertDocumentWithNodes(input: {
     }));
     await db.collection<PageIndexNodeRecord>("pageindex_nodes").insertMany(records);
   }
+
+  await db.collection<PageIndexTreeRecord>("pageindex_trees").updateOne(
+    {
+      documentId,
+      contentHash: input.artifact.contentHash
+    },
+    {
+      $setOnInsert: {
+        _id: new ObjectId(),
+        documentId,
+        schemaVersion: input.artifact.schemaVersion,
+        producer: input.artifact.producer,
+        producerVersion: input.artifact.producerVersion,
+        contentHash: input.artifact.contentHash,
+        byteSize: input.artifact.byteSize,
+        nodeCount: input.nodes.length,
+        indexFileUrl: input.indexFileUrl,
+        rawTree: input.artifact.rawTree,
+        createdAt: now
+      }
+    },
+    { upsert: true }
+  );
 
   const saved = await db.collection<DocumentRecord>("documents").findOne({ _id: documentId });
   if (!saved) throw new Error("Failed to save imported document");

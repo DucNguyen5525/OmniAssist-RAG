@@ -44,6 +44,8 @@ export const apiClient = {
     slug: string;
     tags?: string[];
     version?: string;
+    producer?: "vectify-pageindex" | "internal-md-converter" | "unknown";
+    producerVersion?: string;
     sourceFileUrl?: string;
     indexFileUrl?: string;
     backupToR2?: boolean;

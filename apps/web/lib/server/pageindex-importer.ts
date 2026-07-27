@@ -1,4 +1,5 @@
-﻿import { flattenPageIndexTree } from "./pageindex-flatten";
+import { buildPageIndexArtifact } from "./pageindex-artifact";
+import { flattenPageIndexTree, type PageIndexProducer } from "./pageindex-flatten";
 import { upsertDocumentWithNodes } from "./repository";
 import { uploadJsonToR2 } from "./r2";
 
@@ -7,6 +8,8 @@ export interface ImportPageIndexInput {
   slug: string;
   tags?: string[];
   version?: string;
+  producer?: PageIndexProducer;
+  producerVersion?: string;
   sourceFileUrl?: string;
   indexFileUrl?: string;
   indexJson: unknown;
@@ -18,12 +21,22 @@ export async function importPageIndex(input: ImportPageIndexInput) {
   if (nodes.length === 0) {
     throw new Error("No PageIndex nodes were found in the provided JSON.");
   }
+  if (!nodes.some((node) => node.content.trim().length > 0)) {
+    throw new Error(
+      "The PageIndex tree contains no evidence text. Regenerate it with --if-add-node-text yes."
+    );
+  }
 
   let indexFileUrl = input.indexFileUrl;
   if (input.backupToR2) {
     const key = `pageindex/${input.slug}/${Date.now()}-index.json`;
     indexFileUrl = await uploadJsonToR2(key, input.indexJson);
   }
+  const artifact = buildPageIndexArtifact(input.indexJson, {
+    producer: input.producer,
+    producerVersion: input.producerVersion,
+    externalArtifactAvailable: Boolean(indexFileUrl)
+  });
 
   return upsertDocumentWithNodes({
     title: input.title,
@@ -32,6 +45,7 @@ export async function importPageIndex(input: ImportPageIndexInput) {
     indexFileUrl,
     version: input.version,
     tags: input.tags ?? [],
-    nodes
+    nodes,
+    artifact
   });
 }
