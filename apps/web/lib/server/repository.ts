@@ -256,6 +256,16 @@ export async function getAllNodesForDocuments(documentIds: ObjectId[], limitPerD
     .toArray();
 }
 
+export async function getSyncNodesForDocuments(documentIds: ObjectId[]) {
+  if (documentIds.length === 0) return [];
+  const db = await getDb();
+  return db
+    .collection<PageIndexNodeRecord>("pageindex_nodes")
+    .find({ documentId: { $in: documentIds } })
+    .sort({ documentId: 1, level: 1, nodeId: 1 })
+    .toArray();
+}
+
 export async function upsertDocumentWithNodes(input: {
   title: string;
   slug: string;

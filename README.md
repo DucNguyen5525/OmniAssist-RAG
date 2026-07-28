@@ -193,6 +193,21 @@ The AI will:
 3. Set environment variables (see `.env.example`).
 4. Deploy with the default Next.js build.
 
+Production deployment:
+
+```text
+https://omni-assist-rag-web.vercel.app/
+```
+
+The `support_kb` desktop client synchronizes from:
+
+```text
+https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync
+```
+
+Redeploy this Vercel project after adding or modifying the sync route. A `404`
+from that URL means the deployed build does not yet include the route.
+
 ### MongoDB Atlas
 
 1. Create a MongoDB Atlas cluster.

@@ -94,6 +94,17 @@ export interface RetrievalResponseItem extends SourceReference {
   summary?: string;
 }
 
+export interface HelpdeskSyncSnapshot {
+  schemaVersion: 1;
+  helpdeskSlug: string;
+  helpdeskUpdatedAt: string;
+  requestedDocumentSlugs: string[];
+  snapshotVersion: string;
+  generatedAt: string;
+  documents: HelpdeskDocument[];
+  nodes: PageIndexNode[];
+}
+
 export interface Helpdesk {
   id: string;
   name: string;

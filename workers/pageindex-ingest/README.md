@@ -112,5 +112,19 @@ The smoke command writes a unique document, flattened nodes, an immutable raw
 tree, and an R2 object; verifies them; then removes only those exact smoke
 artifacts. Pass `--keep` only when manual inspection is required.
 
+Backfill a legacy document without replacing retrieval nodes:
+
+```powershell
+# Read-only round-trip validation
+npm run migrate:pageindex-legacy -- --slug tech-support-manual
+
+# Local + R2 backup, R2 artifact upload, transactional MongoDB update
+npm run migrate:pageindex-legacy -- --slug tech-support-manual --apply
+```
+
+The command is idempotent. It refuses inconsistent parent/children data and
+verifies that every node ID and normalized retrieval field survives tree
+reconstruction before writing.
+
 Do not call this worker from Next.js route handlers. It is an ingestion
 boundary, not the production chat retrieval service.

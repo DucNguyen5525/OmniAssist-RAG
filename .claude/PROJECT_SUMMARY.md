@@ -1,7 +1,7 @@
 # Project Summary
 
-**Last Updated:** 2026-07-27 17:50 -04:00
-**Session:** #22 - PageIndex/Ragas reference integration and live operational smoke tests
+**Last Updated:** 2026-07-28 14:30 -04:00
+**Session:** #23 - Added a versioned, helpdesk-scoped sync snapshot for the local support_kb SQLite FTS5 cache.
 
 ---
 
@@ -13,7 +13,10 @@
 - **i18n:** None. Gemini prompt answers in Vietnamese by default.
 - **State Management:** React local state plus browser local storage for retrieval settings.
 - **Styling:** Tailwind CSS with McKay Wrigley Chatbot UI design patterns.
-- **Deployment:** Vercel for `apps/web`; optional Railway only for `workers/pageindex-ingest` long-running ingestion.
+- **Deployment:** `apps/web` is deployed at
+  `https://omni-assist-rag-web.vercel.app/`; optional Railway is used only for
+  `workers/pageindex-ingest` long-running ingestion. Redeploy Vercel after
+  changes to the desktop sync route.
 
 ---
 
@@ -28,6 +31,7 @@ apps/web/app/dashboard/           Helpdesk management dashboard UI
 apps/web/app/chat/[helpdeskSlug]/ Helpdesk-scoped Chat UI
 apps/web/app/api/auth/            Auth API routes (login, logout, check)
 apps/web/app/api/helpdesks/       Helpdesk CRUD API routes
+apps/web/app/api/helpdesks/[slug]/sync/ Read-only scoped PageIndex snapshot API
 apps/web/lib/server/              MongoDB, R2, GCLI/Gemini, Auth, PageIndex import/retrieval, tabular-qa modules
 apps/web/lib/server/tabular-qa.ts AMG-mode: LLM schema-linking + deterministic stats over dataset rows
 scripts/import-dataset.ts         Local importer for CSV/XLS clinical datasets (datasets/dataset_rows)
@@ -99,6 +103,7 @@ Frontend calls same-origin Next API routes through `apps/web/lib/api-client.ts`.
 /api/auth/check                 Auth check API
 /api/helpdesks                  Helpdesk list/create API
 /api/helpdesks/[slug]           Helpdesk get/update/delete API
+/api/helpdesks/[slug]/sync      GET versioned snapshot of linked ready PageIndex documents/nodes
 /api/chat                       Chat Q&A API (supports helpdeskSlug, model)
 /api/chat/sessions/[id]         DELETE: remove conversation + its messages
 /api/documents/analyze          POST: AI suggests import action (new/update, slug, tags)
@@ -127,10 +132,12 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring: content term frequency (capped) + IDF weighting over candidate nodes (rare terms beat generic diacritic-stripped Vietnamese tokens) + IDF-weighted coverage bonus. |
 | PageIndex retrieval evolution | Completed (no production rollout) | `evals/*`, `pageindex-{tree,reasoning,retrieval}.ts`, `ADR-001` | 50-case lexical baseline is reproducible. Follow-up v5-v8 added a 401/403 key circuit breaker and optional compact node refs (38,439 -> 30,627 chars, full coverage). Best quality config still had p95 12.86s; fastest reliable config failed quality/no-answer gates. No full tree eval/canary was allowed. Lexical remains default. |
 | Reference integration hardening | Completed | `pageindex-{flatten,artifact}.ts`, Python ingestion worker, `evals/ragas/*` | Official VectifyAI schema now imports correctly (upstream sample: 1 bogus node before -> 41 valid nodes after). Raw trees are versioned with producer/hash metadata, PageIndex and Ragas commits are pinned. Live smoke tests passed for the pinned PageIndex worker, R2 + Mongo persistence/cleanup, and all five Ragas metrics through GCLI. Production retrieval remains lexical. |
+| Legacy PageIndex data migration | Completed | `migrate_legacy_pageindex.py`, `legacy_tree_reconstruction.py`, MongoDB/R2 | `tech-support-manual` was backed up locally and to R2, reconstructed from its 155 production nodes, and backfilled with schema/provenance/hash plus one raw-tree version. All 155 node IDs and 142 evidence nodes were preserved; full 50-case lexical metrics remained identical. |
 | Vietnamese node summaries | Completed | `scripts/generate-node-summaries.ts` | Gemini (PAGEINDEX_MODEL) writes 1-2 câu tiếng Việt (giữ thuật ngữ Anh) per node into pageindex JSON, batched + idempotent (rerun fills failures); 140/142 tech-support nodes summarized + re-imported. Realistic mixed-language queries now rank target node #1; fully paraphrased VN queries remain a lexical limitation. |
 | Markdown answer rendering | Completed | `ChatMessageItem.tsx`, `tailwind.config.ts` | Assistant messages render via react-markdown + remark-gfm with @tailwindcss/typography prose styles; tables wrapped in overflow-x-auto; user messages stay plain text. |
 | User-facing UI cleanup | Completed | `ChatHeader/InputBar/MessageItem/EmptyState`, chat page, login page | Tech jargon (PageIndex RAG badge, TopK/Tags row, "Vectorless RAG · Antigravity AI") hidden from chat + login; citations panel renamed "Nguồn tham khảo"; admin/dashboard pages keep technical info. Model dropdown moved from header to above the chat input box. |
 | Per-helpdesk document selection | Completed | shared `Helpdesk.documentSlugs`, `repository.ts`, `retrieval.ts`, `/api/chat`, helpdesk routes, dashboard modal | Dashboard create/edit dialog shows checkbox list of imported documents (pageindex mode); explicit `documentSlugs` scoping wins over tags in `listReadyDocuments`; empty selection falls back to tag matching. |
+| Scoped support_kb cache snapshot | Completed | shared `HelpdeskSyncSnapshot`, `helpdesk-sync.ts`, `repository.ts`, `/api/helpdesks/[slug]/sync` | Exports only ready documents explicitly named by the helpdesk's `documentSlugs` and only their nodes. Empty selection returns an empty snapshot rather than querying all MongoDB data. Stable SHA-256 version supports no-op client syncs. |
 | AI-assisted import (human confirm) | Completed | `import-analyzer.ts`, `POST /api/documents/analyze`, admin documents page | On JSON file select, Gemini compares candidate title+section titles against existing documents and proposes action (new vs update+matchedSlug), title, slug, tags with Vietnamese reason; form is prefilled, human edits and confirms via Import. Verified: same manual → "update tech-support-manual"; marketing doc → "new, tags [marketing]". |
 | Images in chat answers | Completed | `scripts/process-doc-images.ts`, `retrieval.ts` (images in SourceReference), `gemini.ts` prompt, `ChatMessageItem.tsx`, `apps/web/public/doc-images/` | sharp: normalize + sharpen + WebP q82 (29.3MB→7.5MB, 561 files); JSON refs rewritten to `/doc-images/<slug>/*.webp` then re-imported; citations show clickable thumbnails; LLM inlines exact image tags when a step is illustrated. `sharp` is a root devDependency (script-only). |
 | Delete chat session | Completed | `repository.ts` (deleteConversation), `DELETE /api/chat/sessions/[id]`, `api-client.ts`, `ChatSidebar.tsx`, chat page | Trash icon per sidebar session (hover) + header "Xóa chat" for active session → custom confirmation modal → deletes conversation + messages from MongoDB. Header button on an unsaved chat just resets the view. Browser-verified incl. reload. |
@@ -145,7 +152,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Tech Support Manual ingest + E2E test | Completed | MongoDB `tech-support-manual` doc | Imported (155 nodes, tags `helpdesk`,`tech-support`); chat E2E verified: DEJAVOO double-item question (VI + EN) and tip-setup question answered correctly with DEJAVOO ISSUES / Set up Tip citations. |
 | Optional Python ingestion worker | Completed | `workers/pageindex-ingest/*` | Uses pinned PageIndex commit `39121c4`, Python 3.13 in `.venv-pageindex`, calls the real upstream entrypoint, validates evidence text, and records producer version. `smoke:pageindex-ingestion` verifies R2 + Mongo then cleans up exact smoke artifacts. Not run in Vercel runtime. |
 | Authentication | Planning | None | Needed before public use. |
-| Automated tests | In Progress | `gemini.test.ts`, `pageindex-{artifact,flatten,tree,reasoning}.test.ts`, Python worker/Ragas tests | 15 TypeScript, 4 PageIndex Python, and 3 Ragas Python tests pass; route/import/scoring coverage remains to be added. |
+| Automated tests | In Progress | `gemini.test.ts`, `helpdesk-sync.test.ts`, `pageindex-{artifact,flatten,tree,reasoning}.test.ts`, Python worker/Ragas tests | 18 TypeScript, 4 PageIndex Python, and 3 Ragas Python tests pass; route/import/scoring coverage remains to be added. |
 
 **Legend:** Planning / In Progress / Completed
 
@@ -201,6 +208,10 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 ### External APIs / Services
 
 - MongoDB Atlas - Documents, PageIndex nodes, conversations, messages, feedback.
+- support_kb desktop - Pulls the scoped `tech-support` snapshot only when its
+  user presses Sync, then searches its separate local SQLite cache. Production
+  endpoint:
+  `https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync`.
 - Cloudflare R2 - Original files and PageIndex JSON backups.
 - GCLI Proxy Upstream - OpenAI-compatible endpoint for Gemini models with key rotation.
 - Vercel - Main app/runtime deployment.
@@ -215,6 +226,9 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - **Retrieval:** Do not add embeddings, vector search, pgvector, or vector DB calls.
 - **Runtime APIs:** Add Next.js API routes in `apps/web/app/api`, not Express routes.
 - **Persistence:** Use `apps/web/lib/server/repository.ts` and MongoDB.
+- **Desktop sync:** Never export all documents as a fallback. Resolve
+  `Helpdesk.documentSlugs`, keep only ready linked PageIndex documents, then
+  load nodes for those document IDs.
 - **Storage:** Use R2 only through `apps/web/lib/server/r2.ts` or worker tooling.
 - **PageIndex processing:** Keep it in `workers/pageindex-ingest/` or local scripts, not Vercel runtime.
 - **Legacy dirs:** Treat `apps/api/` and `supabase/` as disabled legacy artifacts unless explicitly cleaning filesystem locks.
@@ -225,6 +239,7 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [x] `npm run build --workspace @helpdesk/shared`
 - [x] `npm run typecheck`
 - [x] `npm run build`
+- [x] `npm run test:pageindex` (18 passing)
 - [x] Import PageIndex JSON against real MongoDB/R2.
 - [ ] Ask a chat question and verify sources.
 

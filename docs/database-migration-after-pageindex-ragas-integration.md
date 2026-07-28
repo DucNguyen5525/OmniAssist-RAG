@@ -1,18 +1,18 @@
 # So sánh trước/sau và kế hoạch dữ liệu sau tích hợp PageIndex/Ragas
 
 **Ngày audit:** 2026-07-27  
+**Trạng thái:** Đã migration thành công lúc `2026-07-27T23:12:43Z`
 **Database:** `helpdesk_rag`  
 **Phạm vi:** PageIndex ingestion, retrieval, raw-tree persistence và Ragas
 offline evaluation.
 
 ## Kết luận ngắn
 
-Không có migration bắt buộc để ứng dụng tiếp tục chạy. Production retrieval vẫn
-dùng `pageindex_nodes` theo chiến lược lexical, nên dữ liệu hiện tại vẫn tương
-thích.
+Migration không bắt buộc để ứng dụng tiếp tục chạy, nhưng backfill được khuyến
+nghị đã được thực hiện cho `tech-support-manual`. Production retrieval vẫn dùng
+nguyên `pageindex_nodes` theo chiến lược lexical.
 
-Tuy nhiên, nên thực hiện một lần backfill cho document
-`tech-support-manual` để có:
+Backfill đã bổ sung:
 
 - raw PageIndex tree bất biến;
 - canonical SHA-256 content hash;
@@ -24,9 +24,9 @@ Không cần thay đổi `helpdesks`, `conversations`, `messages`, `datasets`,
 `dataset_rows` hoặc `prediction_models`. Ragas là evaluator offline và không
 thêm collection production.
 
-## Snapshot database hiện tại
+## Snapshot trước migration
 
-Kết quả kiểm tra read-only tại thời điểm viết tài liệu:
+Kết quả kiểm tra read-only trước khi apply:
 
 | Thành phần | Giá trị |
 | --- | ---: |
@@ -63,6 +63,55 @@ Các index mới cho `pageindex_trees` đã tồn tại:
 Mười ba node không có `content` không phải lỗi dữ liệu: đây có thể là heading
 hoặc node định tuyến. Document vẫn có 142 node evidence và đang phục vụ lexical
 retrieval bình thường.
+
+## Kết quả sau migration
+
+Migration dùng reconstructed artifact từ chính các node production hiện hữu,
+không re-import và không thay `pageindex_nodes`.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Document status | `ready` |
+| Version | `legacy-backfill-v1` |
+| Schema version | `1` |
+| Producer | `internal-md-converter` |
+| Producer version | Để trống vì không có bằng chứng về commit tạo dữ liệu gốc |
+| Content hash | `4fd2ea076c175a380d94acfb3325845fa8016cac3b065ebda569294f0026e013` |
+| Nodes trước/sau | `155 / 155` |
+| Unique node IDs | `155` |
+| Evidence nodes trước/sau | `142 / 142` |
+| Root nodes | `81` |
+| Raw tree versions | `1` |
+| Raw tree size canonical | `375.378` byte |
+| Raw tree stored inline | Có |
+| R2 reconstructed tree | Có, `397.005` byte |
+| Local pre-migration backup | Có, git-ignored |
+| R2 pre-migration backup | Có, `459.650` byte |
+| Node IDs unchanged | Có |
+| Re-run migration | Idempotent `noop` |
+
+Migration report:
+
+`evals/results/legacy-pageindex-migration-tech-support-manual.json`
+
+Local rollback backup:
+
+`.backups/pageindex-migrations/tech-support-manual-20260727T231238Z-pre-migration.json`
+
+Full lexical regression sau migration:
+
+| Metric | Trước | Sau |
+| --- | ---: | ---: |
+| Hit@1 | `0,60` | `0,60` |
+| Hit@3 | `0,76` | `0,76` |
+| Recall@6 | `0,76` | `0,76` |
+| MRR | `0,6773` | `0,6773` |
+| LLM calls/query | `0` | `0` |
+| Fallback rate | `0` | `0` |
+
+Artifact:
+
+`evals/results/post-legacy-data-migration-lexical-v1.json`
 
 ## Khác biệt trước và sau khi thực hiện
 
@@ -144,17 +193,19 @@ Document hiện tại có đủ evidence và lexical regression không giảm. C
 code mới trước mà chưa backfill. Các field optional giúp code mới đọc được dữ
 liệu cũ.
 
-### Nên thay đổi nếu cần provenance, rollback và tái lập ingestion
+### Phần provenance/rollback đã được backfill
 
-`tech-support-manual` hiện thiếu raw tree và provenance. Hệ quả:
+Trước migration, `tech-support-manual` thiếu raw tree và provenance. Hệ quả khi
+đó là:
 
 - không chứng minh được flattened nodes đến từ artifact/commit nào;
 - không thể so hash để phát hiện drift;
 - không có raw version trong MongoDB để audit/rollback;
 - không có `indexFileUrl` để phục hồi từ R2.
 
-Vì vậy, đây là migration được khuyến nghị trước khi coi phần ingestion là hoàn
-chỉnh ở mức production.
+Các thiếu hụt này đã được xử lý bằng migration reconstructed artifact. Việc để
+trống `producerVersion` là có chủ đích vì không còn bằng chứng xác định commit
+đã tạo dữ liệu legacy gốc.
 
 ## Phương án migration khuyến nghị
 
@@ -288,12 +339,12 @@ Phải so node IDs, chạy full 50-case eval và review citations trước khi c
 
 ## Definition of Done cho database backfill
 
-- [ ] Có backup MongoDB trước migration.
-- [ ] Tìm được original final JSON hoặc quyết định rõ dùng reconstructed artifact.
-- [ ] Document có schema/provenance/hash metadata.
-- [ ] Có raw tree version và R2 backup.
-- [ ] Node count/content count đã đối chiếu.
-- [ ] Golden node IDs/citations không bị drift ngoài dự kiến.
-- [ ] Full lexical regression đạt hoặc vượt baseline.
+- [x] Có backup MongoDB trước migration.
+- [x] Quyết định rõ dùng reconstructed artifact vì original final JSON không còn trong workspace.
+- [x] Document có schema/provenance/hash metadata.
+- [x] Có raw tree version và R2 backup.
+- [x] Node count/content count đã đối chiếu.
+- [x] Golden node IDs/citations không bị drift ngoài dự kiến.
+- [x] Full lexical regression đạt baseline.
 - [ ] Chat E2E trả đúng sources/images.
-- [ ] Rollback đã được kiểm tra hoặc có export khôi phục được.
+- [x] Có local + R2 pre-migration backup để rollback.
