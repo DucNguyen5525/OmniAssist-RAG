@@ -199,11 +199,16 @@ Production deployment:
 https://omni-assist-rag-web.vercel.app/
 ```
 
-The `support_kb` desktop client synchronizes from:
+The `support_kb` desktop client uses this deployment only for scoped cache
+synchronization:
 
 ```text
-https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync
+GET  https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync
 ```
+
+Its Chat AI performs retrieval from that synchronized SQLite cache locally and
+calls GCLI directly using its own ignored `.env`; it does not call this
+project's `/api/chat`.
 
 Redeploy this Vercel project after adding or modifying the sync route. A `404`
 from that URL means the deployed build does not yet include the route.

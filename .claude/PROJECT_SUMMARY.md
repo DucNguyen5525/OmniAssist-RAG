@@ -1,7 +1,9 @@
 # Project Summary
 
-**Last Updated:** 2026-07-28 14:30 -04:00
-**Session:** #23 - Added a versioned, helpdesk-scoped sync snapshot for the local support_kb SQLite FTS5 cache.
+**Last Updated:** 2026-08-08
+**Session:** #26 - Brought `retrieval.ts` into parity with `support_kb` under the shared spec. Scoring moved from raw substring `includes` to token boundaries (whole token full weight, token prefix x0.5, a term inside a token 0), the query now drops ~28 question stopwords (node text never is), consecutive query token pairs earn an adjacent-pair bonus that stands in for Vietnamese word segmentation, and `normalize` maps `đ -> d` explicitly: NFD leaves U+0111 whole, so the punctuation strip was deleting it and `hóa đơn` tokenized as `hoa on`. New `retrieval.test.ts` pins the same numbers the Dart tests pin. 50-case lexical eval: Hit@3 0.76 -> 0.84, Recall@6 0.76 -> 0.83, MRR 0.6773 -> 0.7367, the whole gain coming from the paraphrase and multi-section categories.
+
+**Session:** #25 - Documented that support_kb now runs Chat AI retrieval locally and uses weighted GCLI keys instead of the web chat API.
 
 ---
 
@@ -129,11 +131,11 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 | Supabase/pgvector removal from runtime | Completed | `package.json`, `.env.example`, `README.md`, `LEGACY_DISABLED.md` | Old dirs remain OS-locked but disabled and ignored. |
 | MongoDB data layer | Completed | `mongodb.ts`, `repository.ts` | Connection caching and collection indexes. |
 | Cloudflare R2 layer | Completed | `r2.ts`, importer modules | Used for optional PageIndex JSON backup. |
-| PageIndex vectorless retrieval | Completed | `retrieval.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring: content term frequency (capped) + IDF weighting over candidate nodes (rare terms beat generic diacritic-stripped Vietnamese tokens) + IDF-weighted coverage bonus. |
+| PageIndex vectorless retrieval | Completed | `retrieval.ts`, `retrieval.test.ts` | Lexical score over title/path/summary/content; no embeddings. Scoring: token-boundary matching (whole token x1, token prefix x0.5, inside a token 0) + content token frequency (capped) + IDF weighting over candidate nodes + adjacent-pair bonus + IDF-weighted coverage bonus. Query-side stopwords only. Governed by `docs/shared_retrieval_spec/SHARED_RETRIEVAL_ARCHITECTURE.md` — any change here must be mirrored in `support_kb` and re-benchmarked on both sides. |
 | PageIndex retrieval evolution | Completed (no production rollout) | `evals/*`, `pageindex-{tree,reasoning,retrieval}.ts`, `ADR-001` | 50-case lexical baseline is reproducible. Follow-up v5-v8 added a 401/403 key circuit breaker and optional compact node refs (38,439 -> 30,627 chars, full coverage). Best quality config still had p95 12.86s; fastest reliable config failed quality/no-answer gates. No full tree eval/canary was allowed. Lexical remains default. |
 | Reference integration hardening | Completed | `pageindex-{flatten,artifact}.ts`, Python ingestion worker, `evals/ragas/*` | Official VectifyAI schema now imports correctly (upstream sample: 1 bogus node before -> 41 valid nodes after). Raw trees are versioned with producer/hash metadata, PageIndex and Ragas commits are pinned. Live smoke tests passed for the pinned PageIndex worker, R2 + Mongo persistence/cleanup, and all five Ragas metrics through GCLI. Production retrieval remains lexical. |
 | Legacy PageIndex data migration | Completed | `migrate_legacy_pageindex.py`, `legacy_tree_reconstruction.py`, MongoDB/R2 | `tech-support-manual` was backed up locally and to R2, reconstructed from its 155 production nodes, and backfilled with schema/provenance/hash plus one raw-tree version. All 155 node IDs and 142 evidence nodes were preserved; full 50-case lexical metrics remained identical. |
-| Vietnamese node summaries | Completed | `scripts/generate-node-summaries.ts` | Gemini (PAGEINDEX_MODEL) writes 1-2 câu tiếng Việt (giữ thuật ngữ Anh) per node into pageindex JSON, batched + idempotent (rerun fills failures); 140/142 tech-support nodes summarized + re-imported. Realistic mixed-language queries now rank target node #1; fully paraphrased VN queries remain a lexical limitation. |
+| Vietnamese node summaries | Completed | `scripts/generate-node-summaries.ts` | Gemini (PAGEINDEX_MODEL) writes 1-2 câu tiếng Việt (giữ thuật ngữ Anh) per node into pageindex JSON, batched + idempotent (rerun fills failures); 140/142 tech-support nodes summarized + re-imported. Realistic mixed-language queries now rank target node #1. Fully paraphrased VN queries were the remaining lexical weakness and are the category the Session-#26 scoring change fixed most: paraphrase Hit@3 0.533 -> 0.800, MRR 0.469 -> 0.622. |
 | Markdown answer rendering | Completed | `ChatMessageItem.tsx`, `tailwind.config.ts` | Assistant messages render via react-markdown + remark-gfm with @tailwindcss/typography prose styles; tables wrapped in overflow-x-auto; user messages stay plain text. |
 | User-facing UI cleanup | Completed | `ChatHeader/InputBar/MessageItem/EmptyState`, chat page, login page | Tech jargon (PageIndex RAG badge, TopK/Tags row, "Vectorless RAG · Antigravity AI") hidden from chat + login; citations panel renamed "Nguồn tham khảo"; admin/dashboard pages keep technical info. Model dropdown moved from header to above the chat input box. |
 | Per-helpdesk document selection | Completed | shared `Helpdesk.documentSlugs`, `repository.ts`, `retrieval.ts`, `/api/chat`, helpdesk routes, dashboard modal | Dashboard create/edit dialog shows checkbox list of imported documents (pageindex mode); explicit `documentSlugs` scoping wins over tags in `listReadyDocuments`; empty selection falls back to tag matching. |
@@ -177,7 +179,8 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 - [ ] End-to-end test `amg` mode against a real dataset (e.g. verify proportion queries match the paper reports).
 - [x] Re-run `npm run typecheck` and `npm run build` after dependencies install.
 - [x] Add official-schema and artifact tests for `flattenPageIndexTree` in TypeScript and Python.
-- [ ] Add tests for retrieval scoring, import route, and chat route with mocked Gemini.
+- [x] Retrieval scoring tests: `retrieval.test.ts` covers normalization (including `đ`), stopword filtering, token-boundary strength, the adjacent-pair bonus and the exact IDF/phrase/level totals, and runs in `npm run test:pageindex`.
+- [ ] Add tests for the import route and the chat route with mocked Gemini.
 - [x] Execute `docs/plan-pageindex-retrieval-evolution.md`: 50-case golden set, reproducible baseline/regression, A/B/C spike, ADR, guarded dispatcher, tests, docs, typecheck, and build completed. Production rollout correctly stopped at the failed tree-reasoning latency gate.
 - [x] Prevent repeated invalid GCLI key usage: HTTP 401/403 now disables that key for the process; tested across consecutive requests.
 - [ ] Tree reasoning still fails the combined quality + p95 gate after v5-v8 ablations. Do not run full tree eval/canary until the upstream model route can meet both; production must remain `lexical`.
@@ -208,10 +211,11 @@ Runtime server logic is under `apps/web/lib/server/`. API route handlers parse/v
 ### External APIs / Services
 
 - MongoDB Atlas - Documents, PageIndex nodes, conversations, messages, feedback.
-- support_kb desktop - Pulls the scoped `tech-support` snapshot only when its
-  user presses Sync, then searches its separate local SQLite cache. Production
-  endpoint:
-  `https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync`.
+- support_kb desktop - Its Chat AI retrieves from the scoped SQLite cache
+  locally and calls GCLI with a weighted key pool from its own ignored `.env`;
+  it does not call the web `/api/chat`. It pulls the scoped `tech-support`
+  snapshot only when its user presses Sync via
+  `GET https://omni-assist-rag-web.vercel.app/api/helpdesks/tech-support/sync`.
 - Cloudflare R2 - Original files and PageIndex JSON backups.
 - GCLI Proxy Upstream - OpenAI-compatible endpoint for Gemini models with key rotation.
 - Vercel - Main app/runtime deployment.
